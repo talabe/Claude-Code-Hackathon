@@ -5,7 +5,6 @@ Claude Code Hackathon Project
 - Vitor Correa (UK)
 - Talab Elmharek (IST)
 - Philipp Kowalski (CET)
-- Shakti Swarup (IST)
 - Ramanuj Kumar (IST)
 
 ## Project Description
