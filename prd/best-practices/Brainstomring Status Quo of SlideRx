@@ -1,0 +1,102 @@
+# SlideRx: Feature & Idea Base
+
+## Core Value Proposition
+Transform bloated business presentations into executive-ready summaries while teaching presentation principles. Goes beyond surface polishing—actually condenses and educates.
+
+---
+
+## MVP Features (Hackathon Scope)
+
+### 1. Upload & Input
+- Accept PPTX and PDF formats
+- One key question: "What's the business purpose?" (Status Update, Pitch, Budget Request, Problem Justification, etc.)
+
+### 2. Executive Summary Generator
+- Input: 40-slide deck → Output: 3-slide summary
+  - **Slide 1:** The Problem (visual + one sentence)
+  - **Slide 2:** The Solution (diagram/data viz + one sentence)
+  - **Slide 3:** The Ask/Next Steps (clear CTA + one sentence)
+
+### 3. "Why We Cut This" Report
+- Explains each decision with learning principles
+- Examples: 
+  - "Slides 7-12 were background—moved to appendix"
+  - "Slide 15 had 6 bullets—condensed to visual metaphor"
+  - "Conclusion was on slide 38—moved to slide 3"
+
+### 4. Revision Interface
+- Text-based chat for quick edits
+- Examples: "Make opening more aggressive" or "CFO hates pie charts, use table instead"
+
+---
+
+## Extended Features (Post-Hackathon)
+
+### Analysis & Scoring
+- **Slide Autopsy Mode:** Roasts your deck with specific feedback ("Slide 7 has 47 words. Nancy Duarte would cry.")
+- **Story Arc Analyzer:** Maps presentation against frameworks (Hero's Journey, Problem-Solution-Benefit)
+- **Duarte Compliance Score:** Rates deck on contrast, whitespace, data-ink ratio, emotional resonance (score out of 100)
+
+### Learning Mode
+- Interactive quiz after generation: "Which principle did we apply? A) Contrast B) Repetition C) Alignment"
+- Progressive learning—users internalize Duarte/Roam principles over time
+
+### Collaboration Features
+- Version history with shareable links ("Review v3, changed conclusion based on feedback")
+- Multi-user access for team iterations
+- Consistency tracking across versions
+
+---
+
+## Monetization Strategy
+
+### FREE Tier
+- Generate 3-slide summary (1-2 per month limit)
+- Basic "why we cut this" explanations
+- Watermarked slides
+
+### PREMIUM ($9/month or $49/year)
+- Unlimited summaries
+- Learning Mode with interactive quizzes
+- Downloadable slides (PowerPoint/Keynote, no watermark)
+- Custom branding (company colors/fonts)
+- "Impress Your Exec" templates
+
+### ENTERPRISE ($99/month)
+- Team accounts with collaboration tools
+- Brand style guide enforcement
+- API access for bulk processing
+- Priority support
+
+---
+
+## Key Differentiators
+
+**vs. Gamma.ai:** No confusing one-sentence-at-a-time generation. Clear purpose-driven condensation.
+
+**vs. Microsoft Copilot:** Actually condenses instead of just polishing. Teaches WHY decisions were made.
+
+**Unique Angle:** Multi-user versioning + learning mode = tool that improves both your deck AND your skills.
+
+---
+
+## Marketing Positioning
+
+**Headline:** "Your CEO doesn't have 40 minutes. We give them 3."
+
+**Testimonial Format:** "Before: 40 slides, 12% approval rate. After: 3 slides, 89% approval rate."
+
+**Target Audience:** Corporate professionals, consultants, product managers, anyone presenting to executives
+
+---
+
+## Technical Approach
+- Small task division across team members
+- Feature branches → PR review → merge to main
+- Public GitHub repo for community accountability
+- Focus: Ship working MVP, not vaporware
+
+---
+
+**Project Status:** In active development during hackathon  
+**Last Updated:** October 3, 2025
