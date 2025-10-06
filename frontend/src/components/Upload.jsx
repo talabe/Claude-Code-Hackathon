@@ -203,7 +203,7 @@ const Upload = () => {
       <main className="max-w-[800px] mx-auto px-4 sm:px-8 py-8 sm:py-16">
         {/* Page Title */}
         <h1 className="text-4xl font-bold text-gray-900 mb-8 sm:mb-12">
-          Transform Your Deck
+          Transform Your Deck - Make An Impact
         </h1>
 
         {/* Business Purpose Section */}
@@ -237,7 +237,7 @@ const Upload = () => {
 
         {/* Dynamic Follow-up Questions Section */}
         {currentQuestions.length > 0 && (
-          <section className="mb-8 space-y-6">
+          <section className="mb-8 space-y-6 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
                 <span className="text-white font-bold text-lg">2</span>
@@ -255,13 +255,21 @@ const Upload = () => {
                 </label>
 
                 {question.type === 'text' ? (
-                  <input
-                    type="text"
-                    value={followUpAnswers[question.id] || ''}
-                    onChange={(e) => handleFollowUpChange(question.id, e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
-                    placeholder="Enter your answer..."
-                  />
+                  <div>
+                    <input
+                      type="text"
+                      value={followUpAnswers[question.id] || ''}
+                      onChange={(e) => handleFollowUpChange(question.id, e.target.value)}
+                      maxLength={100}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                      placeholder="Enter your answer..."
+                    />
+                    <div className="text-right mt-1">
+                      <span className={`text-xs italic ${(followUpAnswers[question.id]?.length || 0) > 85 ? 'text-[#EF4444] font-semibold' : 'text-[#64748B]'}`}>
+                        {followUpAnswers[question.id]?.length || 0}/100
+                      </span>
+                    </div>
+                  </div>
                 ) : (
                   <select
                     value={followUpAnswers[question.id] || ''}
@@ -283,7 +291,7 @@ const Upload = () => {
 
         {/* File Upload Section - Only show when conditions are met */}
         {showFileUpload && (
-          <section className="mb-8">
+          <section className="mb-8 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${currentQuestions.length > 0 ? 'bg-[#2563EB]' : 'bg-[#10B981]'}`}>
                 <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '3' : '2'}</span>
