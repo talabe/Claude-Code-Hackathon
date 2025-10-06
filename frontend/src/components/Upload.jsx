@@ -203,8 +203,11 @@ const Upload = () => {
               <span className="text-white font-bold text-lg">1</span>
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 text-center">Business Purpose</h2>
+            <p className="text-sm text-[#64748B] italic text-center mt-2">
+              This helps our AI tailor the analysis to your specific presentation goals and executive expectations.
+            </p>
           </div>
-          <label className="block text-base font-medium text-gray-900 mb-2">
+          <label className="block text-base font-bold text-gray-900 mb-2">
             What's the business purpose?
           </label>
           <select
@@ -230,11 +233,14 @@ const Upload = () => {
                 <span className="text-white font-bold text-lg">2</span>
               </div>
               <h2 className="text-2xl font-semibold text-gray-900 text-center">Additional Details</h2>
+              <p className="text-sm text-[#64748B] italic text-center mt-2">
+                These details help the AI understand your purpose and provide tailor-made recommendations.
+              </p>
             </div>
 
             {currentQuestions.map((question) => (
               <div key={question.id}>
-                <label className="block text-base font-medium text-gray-900 mb-2">
+                <label className="block text-base font-bold text-gray-900 mb-2">
                   {question.label}
                 </label>
 
@@ -272,6 +278,9 @@ const Upload = () => {
               <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '3' : '2'}</span>
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 text-center">File Upload</h2>
+            <p className="text-sm text-[#64748B] italic text-center mt-2">
+              Upload your PDF presentation so our AI can analyze and condense it into an executive-ready summary.
+            </p>
           </div>
           <div
             className={`
