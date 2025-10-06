@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
 // Follow-up questions configuration for each business purpose
@@ -58,6 +59,7 @@ const Upload = () => {
   const [error, setError] = useState('');
 
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
   // File validation
   const validateFile = (file) => {
@@ -172,7 +174,7 @@ const Upload = () => {
         <div className="max-w-[800px] mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
           <button
             className="flex items-center gap-2 text-[#64748B] hover:text-[#2563EB] transition-colors"
-            onClick={() => console.log('Back clicked')}
+            onClick={() => navigate('/')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -182,7 +184,7 @@ const Upload = () => {
 
           <button
             className="px-4 py-2 text-sm font-medium text-[#64748B] hover:text-[#EF4444] transition-colors"
-            onClick={() => console.log('Logout clicked')}
+            onClick={() => navigate('/logout')}
           >
             Logout
           </button>
