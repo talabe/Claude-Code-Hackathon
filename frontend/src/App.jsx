@@ -50,7 +50,7 @@ const Home = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Analyze</h3>
               <p className="text-[#64748B]">
-                AI analyzes your deck using Nancy Duarte and Dan Roam principles
+                AI analyzes your deck using time-tested presentation principles
               </p>
             </div>
 
