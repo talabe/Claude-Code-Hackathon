@@ -167,6 +167,14 @@ const Upload = () => {
   // Get current follow-up questions based on selected purpose
   const currentQuestions = businessPurpose ? FOLLOW_UP_QUESTIONS[businessPurpose] || [] : [];
 
+  // Check if all follow-up questions are answered
+  const allFollowUpsAnswered = currentQuestions.length > 0
+    ? currentQuestions.every(q => followUpAnswers[q.id] && followUpAnswers[q.id].trim() !== '')
+    : false;
+
+  // Determine if file upload section should be shown
+  const showFileUpload = businessPurpose && (currentQuestions.length === 0 || allFollowUpsAnswered);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Header */}
@@ -273,17 +281,18 @@ const Upload = () => {
           </section>
         )}
 
-        {/* File Upload Section */}
-        <section className="mb-8">
-          <div className="flex flex-col items-center mb-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${currentQuestions.length > 0 ? 'bg-[#2563EB]' : 'bg-[#10B981]'}`}>
-              <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '3' : '2'}</span>
+        {/* File Upload Section - Only show when conditions are met */}
+        {showFileUpload && (
+          <section className="mb-8">
+            <div className="flex flex-col items-center mb-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${currentQuestions.length > 0 ? 'bg-[#2563EB]' : 'bg-[#10B981]'}`}>
+                <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '3' : '2'}</span>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900 text-center">File Upload</h2>
+              <p className="text-sm text-[#64748B] italic text-center mt-2">
+                Upload your PDF presentation so our AI can analyze and condense it into an executive-ready summary.
+              </p>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 text-center">File Upload</h2>
-            <p className="text-sm text-[#64748B] italic text-center mt-2">
-              Upload your PDF presentation so our AI can analyze and condense it into an executive-ready summary.
-            </p>
-          </div>
           <div
             className={`
               relative border-2 border-dashed rounded-lg p-8 sm:p-12 text-center transition-all
@@ -353,7 +362,8 @@ const Upload = () => {
               </div>
             )}
           </div>
-        </section>
+          </section>
+        )}
 
         {/* Submit Button */}
         <div className="flex justify-center mt-12">
