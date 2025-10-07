@@ -160,8 +160,8 @@ const Upload = () => {
     console.log(formData);
     console.log('================================');
 
-    // In production, this would trigger navigation to results page
-    alert('Form submitted! Check console for details.');
+    // Navigate to processing page
+    navigate('/processing');
   };
 
   // Get current follow-up questions based on selected purpose

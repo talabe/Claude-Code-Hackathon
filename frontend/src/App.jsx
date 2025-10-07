@@ -13,6 +13,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Upload from './components/Upload';
 import Logout from './components/Logout';
+import Processing from './components/Processing';
 
 // Simple Home/Landing page component
 const Home = () => {
@@ -88,6 +89,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/upload" element={<Upload />} />
+        <Route path="/processing" element={<Processing />} />
         <Route path="/logout" element={<Logout />} />
       </Routes>
     </Router>
