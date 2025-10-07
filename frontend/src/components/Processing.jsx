@@ -162,11 +162,15 @@ const Processing = () => {
               style={{ opacity: isVisible ? 1 : 0 }}
             >
               {currentContent.type === 'citation' ? (
-                <blockquote className="text-center">
-                  <p className="text-lg sm:text-xl text-gray-800 italic leading-relaxed">
-                    "{currentContent.text}"
-                  </p>
-                </blockquote>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">💬</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#2563EB] mb-2">Presentation Wisdom:</p>
+                    <p className="text-base sm:text-lg text-gray-800 italic leading-relaxed">
+                      {currentContent.text}
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="flex items-start gap-3">
                   <span className="text-2xl flex-shrink-0">💡</span>
@@ -187,7 +191,7 @@ const Processing = () => {
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                  i === Math.floor(contentIndex / 4) % 5
+                  i === contentIndex % 5
                     ? 'bg-[#2563EB] w-8'
                     : 'bg-gray-300'
                 }`}
