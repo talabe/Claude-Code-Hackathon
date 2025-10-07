@@ -75,22 +75,36 @@ const Processing = () => {
     if (shuffledContent.length === 0) return;
 
     const rotationInterval = setInterval(() => {
-      // Fade out
-      setIsVisible(false);
-
-      // Wait for fade out, then change content and fade in
-      setTimeout(() => {
-        setContentIndex(prevIndex => {
-          const nextIndex = (prevIndex + 1) % shuffledContent.length;
-          setCurrentContent(shuffledContent[nextIndex]);
-          return nextIndex;
-        });
-        setIsVisible(true);
-      }, 300); // Match fade-out duration
+      handleNext();
     }, 8000); // Rotate every 8 seconds
 
     return () => clearInterval(rotationInterval);
-  }, [shuffledContent]);
+  }, [shuffledContent, contentIndex]);
+
+  // Navigation handlers
+  const handleNext = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      setContentIndex(prevIndex => {
+        const nextIndex = (prevIndex + 1) % shuffledContent.length;
+        setCurrentContent(shuffledContent[nextIndex]);
+        return nextIndex;
+      });
+      setIsVisible(true);
+    }, 300);
+  };
+
+  const handlePrevious = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      setContentIndex(prevIndex => {
+        const prevIndexValue = prevIndex === 0 ? shuffledContent.length - 1 : prevIndex - 1;
+        setCurrentContent(shuffledContent[prevIndexValue]);
+        return prevIndexValue;
+      });
+      setIsVisible(true);
+    }, 300);
+  };
 
   // Mock processing timer - simulates AI analysis
   useEffect(() => {
@@ -149,18 +163,36 @@ const Processing = () => {
 
           {/* Status Text */}
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
-            Analyzing your presentation
+            AI is analyzing your slides
           </h2>
           <p className="text-sm text-[#64748B] mb-12 text-center">
-            This usually takes 45-60 seconds
+            This can take up to 60 seconds
           </p>
 
-          {/* Rotating Content Box */}
-          <div className="w-full max-w-[600px] bg-white rounded-lg shadow-lg p-8 min-h-[200px] flex items-center justify-center">
-            <div
-              className="transition-opacity duration-300 ease-in-out"
-              style={{ opacity: isVisible ? 1 : 0 }}
+          {/* Rotating Content Box with Navigation */}
+          <div className="w-full max-w-[800px] flex items-center gap-4">
+            {/* Previous Button */}
+            <button
+              onClick={handlePrevious}
+              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full shadow-lg hover:shadow-xl hover:bg-[#F8FAFC] transition-all flex items-center justify-center group"
+              aria-label="Previous content"
             >
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B] group-hover:text-[#2563EB] transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Content Box */}
+            <div className="flex-1 bg-white rounded-lg shadow-lg p-8 min-h-[200px] flex items-center justify-center">
+              <div
+                className="transition-opacity duration-300 ease-in-out"
+                style={{ opacity: isVisible ? 1 : 0 }}
+              >
               {currentContent.type === 'citation' ? (
                 <div className="flex items-start gap-3">
                   <span className="text-2xl flex-shrink-0">💬</span>
@@ -182,7 +214,24 @@ const Processing = () => {
                   </div>
                 </div>
               )}
+              </div>
             </div>
+
+            {/* Next Button */}
+            <button
+              onClick={handleNext}
+              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full shadow-lg hover:shadow-xl hover:bg-[#F8FAFC] transition-all flex items-center justify-center group"
+              aria-label="Next content"
+            >
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B] group-hover:text-[#2563EB] transition-colors"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
 
           {/* Progress Indicator Dots (optional visual enhancement) */}
