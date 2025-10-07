@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Content arrays - parsed from markdown files
 const CITATIONS = [
@@ -64,6 +65,8 @@ const prepareContent = () => {
 };
 
 const Processing = () => {
+  const navigate = useNavigate();
+
   // Initialize with shuffled content immediately
   const [shuffledContent] = useState(() => prepareContent());
   const [currentContent, setCurrentContent] = useState(shuffledContent[0]);
@@ -112,15 +115,14 @@ const Processing = () => {
 
     const processingTimer = setTimeout(() => {
       console.log('=== Processing Complete ===');
-      console.log('AI analysis finished. Ready to display results.');
-      console.log('(Results page not yet implemented - staying on processing page)');
+      console.log('AI analysis finished. Navigating to results page...');
 
-      // When /results page exists, navigate there:
-      // navigate('/results');
+      // Navigate to results page
+      navigate('/results');
     }, processingDuration);
 
     return () => clearTimeout(processingTimer);
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
