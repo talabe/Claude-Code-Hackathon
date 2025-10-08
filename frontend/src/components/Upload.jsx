@@ -57,9 +57,14 @@ const Upload = () => {
   const [followUpAnswers, setFollowUpAnswers] = useState({});
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // API Configuration
+  const API_BASE_URL = 'https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev';
+  const USER_ID = 'test-user';
 
   // File validation
   const validateFile = (file) => {
@@ -147,21 +152,60 @@ const Upload = () => {
   };
 
   // Form submission handler
-  const handleSubmit = () => {
-    const formData = {
-      fileName: selectedFile.name,
-      fileSize: selectedFile.size,
-      businessPurpose,
-      followUpAnswers,
-      timestamp: new Date().toISOString()
-    };
+  const handleSubmit = async () => {
+    setIsUploading(true);
+    setError('');
 
-    console.log('=== SlideRx Form Submission ===');
-    console.log(formData);
-    console.log('================================');
+    try {
+      // Step 1: Start Project
+      const projectData = {
+        businessPurpose,
+        projectPhase: followUpAnswers['project-phase'] || followUpAnswers['report-type'] || '',
+        keyMetrics: followUpAnswers['key-metrics'] || followUpAnswers['success-metric'] || '',
+        currentBlockers: followUpAnswers['blockers'] || followUpAnswers['urgency'] || '',
+        fileName: selectedFile.name
+      };
 
-    // Navigate to processing page
-    navigate('/processing');
+      console.log('Starting project with data:', projectData);
+
+      const projectResponse = await fetch(`${API_BASE_URL}/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': USER_ID
+        },
+        body: JSON.stringify(projectData)
+      });
+
+      if (!projectResponse.ok) {
+        throw new Error('Failed to start project. Please try again.');
+      }
+
+      const { projectId, uploadUrl } = await projectResponse.json();
+      console.log('Project created with ID:', projectId);
+
+      // Step 2: Upload PDF to S3
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/pdf'
+        },
+        body: selectedFile
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file. Please try again.');
+      }
+
+      console.log('File uploaded successfully');
+
+      // Step 3: Navigate to processing page
+      navigate(`/processing/${projectId}`);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError(err.message || 'An error occurred. Please try again.');
+      setIsUploading(false);
+    }
   };
 
   // Get current follow-up questions based on selected purpose
@@ -377,16 +421,16 @@ const Upload = () => {
         <div className="flex justify-center mt-12">
           <button
             onClick={handleSubmit}
-            disabled={!selectedFile || !businessPurpose}
+            disabled={!selectedFile || !businessPurpose || isUploading}
             className={`
               px-12 py-4 rounded-lg font-semibold text-lg transition-all
-              ${selectedFile && businessPurpose
+              ${selectedFile && businessPurpose && !isUploading
                 ? 'bg-[#2563EB] text-white hover:bg-[#1e40af] cursor-pointer shadow-lg hover:shadow-xl'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }
             `}
           >
-            Analyze Deck
+            {isUploading ? 'Uploading...' : 'Analyze Deck'}
           </button>
         </div>
       </main>
