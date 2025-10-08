@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 // Content arrays - parsed from markdown files
 const CITATIONS = [
@@ -66,12 +66,19 @@ const prepareContent = () => {
 
 const Processing = () => {
   const navigate = useNavigate();
+  const { projectId } = useParams();
+
+  // API Configuration
+  const API_BASE_URL = 'https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev';
+  const USER_ID = 'test-user';
 
   // Initialize with shuffled content immediately
   const [shuffledContent] = useState(() => prepareContent());
   const [currentContent, setCurrentContent] = useState(shuffledContent[0]);
   const [contentIndex, setContentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [error, setError] = useState('');
+  const [minLoadingTimeMet, setMinLoadingTimeMet] = useState(false);
 
   // Content rotation logic
   useEffect(() => {
@@ -109,20 +116,92 @@ const Processing = () => {
     }, 300);
   };
 
-  // Mock processing timer - simulates AI analysis
+  // Validate projectId on mount
   useEffect(() => {
-    const processingDuration = 52000; // 52 seconds (within 50-55 range)
+    if (!projectId) {
+      setError('Invalid project ID');
+      console.error('No projectId found in URL');
+    }
+  }, [projectId]);
 
-    const processingTimer = setTimeout(() => {
-      console.log('=== Processing Complete ===');
-      console.log('AI analysis finished. Navigating to results page...');
+  // Minimum loading time (better UX - show at least 10 seconds of loading)
+  useEffect(() => {
+    const minTimer = setTimeout(() => {
+      setMinLoadingTimeMet(true);
+    }, 10000); // 10 seconds minimum
 
-      // Navigate to results page
-      navigate('/results');
-    }, processingDuration);
+    return () => clearTimeout(minTimer);
+  }, []);
 
-    return () => clearTimeout(processingTimer);
-  }, [navigate]);
+  // Poll backend API for project status
+  useEffect(() => {
+    if (!projectId) return;
+
+    let isSubscribed = true;
+
+    const checkProjectStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+          method: 'GET',
+          headers: {
+            'x-user-id': USER_ID
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Unable to check processing status. Please refresh the page.');
+        }
+
+        const data = await response.json();
+        console.log('Project status:', data.status);
+
+        // If completed and minimum loading time has passed, navigate to results
+        if (data.status === 'completed' && minLoadingTimeMet && isSubscribed) {
+          console.log('Processing complete. Navigating to results...');
+          navigate(`/results/${projectId}`);
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
+        if (isSubscribed) {
+          setError(err.message || 'Unable to check processing status. Please refresh the page.');
+        }
+      }
+    };
+
+    // Check immediately on mount
+    checkProjectStatus();
+
+    // Then poll every 5 seconds
+    const pollInterval = setInterval(checkProjectStatus, 5000);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(pollInterval);
+    };
+  }, [projectId, minLoadingTimeMet, navigate, API_BASE_URL, USER_ID]);
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="max-w-md mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <svg className="w-16 h-16 text-[#EF4444] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
+            <p className="text-[#64748B] mb-6">{error}</p>
+            <button
+              onClick={() => navigate('/upload')}
+              className="px-6 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-medium"
+            >
+              Back to Upload
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
