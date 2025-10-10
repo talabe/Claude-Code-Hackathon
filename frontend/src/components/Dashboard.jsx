@@ -56,31 +56,31 @@ const Dashboard = () => {
   // Get status badge configuration
   const getStatusBadge = (status) => {
     const statusConfig = {
-      uploading: {
-        color: 'bg-[#2563EB] text-white',
+      'uploading': {
+        color: 'bg-[#3B82F6] text-white',
         icon: '🔵',
         text: 'Uploading...',
         animate: false
       },
-      processing: {
+      'processing': {
         color: 'bg-[#F59E0B] text-white',
         icon: '🟡',
         text: 'Analyzing...',
         animate: false
       },
-      need_review: {
-        color: 'bg-[#EF4444] text-white',
+      'needs_review': {
+        color: 'bg-[#F97316] text-white',
         icon: '🟠',
         text: 'Action Required',
         animate: true
       },
-      generating_presentation: {
+      'generating presentation': {
         color: 'bg-[#8B5CF6] text-white',
         icon: '🟣',
         text: 'Finalizing...',
         animate: false
       },
-      completed: {
+      'completed': {
         color: 'bg-[#10B981] text-white',
         icon: '🟢',
         text: 'Ready to View',
@@ -89,18 +89,18 @@ const Dashboard = () => {
     };
 
     // Default to processing if status is unknown
-    return statusConfig[status] || statusConfig.processing;
+    return statusConfig[status] || statusConfig['processing'];
   };
 
   // Get action button text based on status
   const getActionButtonText = (status) => {
     switch (status) {
-      case 'need_review':
+      case 'needs_review':
         return 'Answer Questions →';
       case 'completed':
         return 'View Results →';
       case 'processing':
-      case 'generating_presentation':
+      case 'generating presentation':
         return 'View Status →';
       case 'uploading':
         return 'Processing...';
@@ -122,13 +122,13 @@ const Dashboard = () => {
       return;
     }
 
-    if (status === 'need_review') {
+    if (status === 'needs_review') {
       console.log(`Navigating to /followup/${projectId}`);
       navigate(`/followup/${projectId}`);
     } else if (status === 'completed') {
       console.log(`Navigating to /results/${projectId}`);
       navigate(`/results/${projectId}`);
-    } else if (status === 'processing' || status === 'generating_presentation') {
+    } else if (status === 'processing' || status === 'generating presentation') {
       console.log(`Navigating to /processing/${projectId}`);
       navigate(`/processing/${projectId}`);
     }
@@ -208,6 +208,11 @@ const Dashboard = () => {
   // Extract business purpose from project
   const getBusinessPurpose = (project) => {
     return project.businessPurpose || project.projectBrief?.businessPurpose || 'Untitled Project';
+  };
+
+  // Get display name for project card
+  const getDisplayName = (project) => {
+    return project.projectName || project.projectId || 'Untitled Project';
   };
 
   // Loading state
@@ -382,6 +387,7 @@ const Dashboard = () => {
           {projects.map((project) => {
             const statusBadge = getStatusBadge(project.status);
             const businessPurpose = getBusinessPurpose(project);
+            const displayName = getDisplayName(project);
             const actionText = getActionButtonText(project.status);
             const isUploading = project.status === 'uploading';
 
@@ -393,7 +399,7 @@ const Dashboard = () => {
                 onKeyDown={(e) => e.key === 'Enter' && handleCardClick(project)}
                 tabIndex={0}
                 role="button"
-                aria-label={`Open project: ${businessPurpose}`}
+                aria-label={`Open project: ${displayName}`}
               >
                 {/* Status Badge */}
                 <div className="mb-4">
@@ -406,10 +412,17 @@ const Dashboard = () => {
                   </span>
                 </div>
 
-                {/* Business Purpose (Card Title) */}
-                <h3 className="text-xl font-semibold text-gray-900 mb-3 line-clamp-2">
-                  {businessPurpose}
-                </h3>
+                {/* Project Name (Card Title) */}
+                <div className="mb-3">
+                  <h3 className="text-xl font-semibold text-[#1F2937] leading-snug line-clamp-2">
+                    {displayName}
+                  </h3>
+                  {project.businessPurpose && (
+                    <p className="text-sm text-[#64748B] mt-1">
+                      Presentation type: {project.businessPurpose}
+                    </p>
+                  )}
+                </div>
 
                 {/* Metadata */}
                 <div className="text-sm text-[#64748B] mb-4">
@@ -435,6 +448,13 @@ const Dashboard = () => {
                 >
                   {actionText}
                 </button>
+
+                {/* ⚠️⚠️⚠️ TEMPORARY DEBUG - DELETE THIS BEFORE PRODUCTION ⚠️⚠️⚠️ */}
+                <p className="text-xs italic text-[#64748B] mt-2 text-center">
+                  Project ID: {project.projectId}<br />
+                  Status: {project.status}
+                </p>
+                {/* ⚠️⚠️⚠️ END TEMPORARY DEBUG ⚠️⚠️⚠️ */}
               </article>
             );
           })}
