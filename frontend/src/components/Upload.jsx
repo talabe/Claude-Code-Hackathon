@@ -225,7 +225,7 @@ const Upload = () => {
         <div className="max-w-[800px] mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
           <button
             className="flex items-center gap-2 text-[#64748B] hover:text-[#2563EB] transition-colors"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

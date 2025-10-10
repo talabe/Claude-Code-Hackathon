@@ -16,6 +16,7 @@ import Logout from './components/Logout';
 import Processing from './components/Processing';
 import FollowUp from './components/FollowUp';
 import Results from './components/Results';
+import Dashboard from './components/Dashboard';
 
 // Simple Home/Landing page component
 const Home = () => {
@@ -70,7 +71,7 @@ const Home = () => {
         </div>
 
         <Link
-          to="/upload"
+          to="/dashboard"
           className="inline-block px-12 py-4 bg-white text-[#2563EB] rounded-lg font-bold text-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl"
         >
           Get Started
@@ -90,6 +91,7 @@ const App = () => {
     <Router>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/upload" element={<Upload />} />
         <Route path="/processing/:projectId" element={<Processing />} />
         <Route path="/followup/:projectId" element={<FollowUp />} />
