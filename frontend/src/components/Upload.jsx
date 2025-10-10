@@ -54,6 +54,7 @@ const Upload = () => {
   // State management
   const [selectedFile, setSelectedFile] = useState(null);
   const [businessPurpose, setBusinessPurpose] = useState('');
+  const [projectName, setProjectName] = useState('');
   const [followUpAnswers, setFollowUpAnswers] = useState({});
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState('');
@@ -160,6 +161,7 @@ const Upload = () => {
       // Step 1: Start Project
       const projectData = {
         businessPurpose,
+        projectName: projectName.trim() || undefined,
         projectBrief: followUpAnswers,
         fileName: selectedFile.name
       };
@@ -278,12 +280,45 @@ const Upload = () => {
           </select>
         </section>
 
+        {/* Project Name Section */}
+        {businessPurpose && (
+          <section className="mb-8 fade-in-section">
+            <div className="flex flex-col items-center mb-4">
+              <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
+                <span className="text-white font-bold text-lg">2</span>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900 text-center">Project Name (optional)</h2>
+              <p className="text-sm text-[#64748B] italic text-center mt-2">
+                Give your project a memorable name for easy reference
+              </p>
+            </div>
+            <label className="block text-base font-bold text-gray-900 mb-2">
+              Project Name
+            </label>
+            <div>
+              <input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                maxLength={100}
+                placeholder="e.g., Q4 Budget Review, Client Pitch Deck, Team Update"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+              />
+              <div className="text-right mt-1">
+                <span className={`text-xs italic ${projectName.length > 85 ? 'text-[#EF4444] font-semibold' : 'text-[#64748B]'}`}>
+                  {projectName.length}/100
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Dynamic Follow-up Questions Section */}
         {currentQuestions.length > 0 && (
           <section className="mb-8 space-y-6 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
-                <span className="text-white font-bold text-lg">2</span>
+                <span className="text-white font-bold text-lg">3</span>
               </div>
               <h2 className="text-2xl font-semibold text-gray-900 text-center">Additional Details</h2>
               <p className="text-sm text-[#64748B] italic text-center mt-2">
@@ -337,7 +372,7 @@ const Upload = () => {
           <section className="mb-8 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${currentQuestions.length > 0 ? 'bg-[#2563EB]' : 'bg-[#10B981]'}`}>
-                <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '3' : '2'}</span>
+                <span className="text-white font-bold text-lg">{currentQuestions.length > 0 ? '4' : '3'}</span>
               </div>
               <h2 className="text-2xl font-semibold text-gray-900 text-center">File Upload</h2>
               <p className="text-sm text-[#64748B] italic text-center mt-2">
