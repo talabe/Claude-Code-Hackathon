@@ -1,0 +1,11 @@
+{
+  "projectId": "78c8c4a6-81e1-4592-97db-d258317577ff",
+  "s3Bucket": "sliderx-uploads-dev",
+  "s3Key": "uploads/test-user/78c8c4a6-81e1-4592-97db-d258317577ff/presentation.pdf",
+  "projectBrief": {
+    "businessPurpose": "Launching a new AI-powered analytics dashboard to help SMBs make data-driven decisions",
+    "projectPhase": "MVP Development - building core features and initial prototype",
+    "keyMetrics": "Target 1000 beta users in first quarter, 80% feature completion, sub-2s dashboard load time",
+    "currentBlockers": "Limited engineering resources, need to prioritize features for MVP scope"
+  }
+}

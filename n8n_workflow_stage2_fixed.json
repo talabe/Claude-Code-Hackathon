@@ -1,0 +1,205 @@
+{
+  "name": "SlideRx - Stage 2: Final Generation (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-stage2",
+      "name": "Webhook: User Answered",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "stage2-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract complete context from API\nconst body = $input.item.json.body || $input.item.json;\n\nreturn {\n  projectId: body.projectId,\n  projectBrief: body.projectBrief,\n  reviewAndRefine: body.reviewAndRefine,\n  summary: body.summary,\n  userAnswers: body.userAnswers || body.answers\n};"
+      },
+      "id": "parse-stage2-input",
+      "name": "Parse User Answers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final AI prompt with all context\nconst data = $input.item.json;\n\nconst systemPrompt = `You are a presentation strategist trained in Nancy Duarte and Dan Roam principles.\n\nYour task is to create a final 3-slide executive presentation.\n\nPRINCIPLES:\n1. Decision-first structure (executives start with conclusion)\n2. Visual over verbal (images process 60,000x faster than text)\n3. One idea per slide\n4. No jargon\n5. Specific visual descriptions\n\nOUTPUT FORMAT (JSON):\n{\n  \"slide1\": {\n    \"title\": \"THE PROBLEM\",\n    \"visual\": \"[Specific visual description - e.g., 'Bar chart showing 40% cost increase over 3 years vs industry 15% average']\",\n    \"sentence\": \"[Max 15 words - the core problem statement]\"\n  },\n  \"slide2\": {\n    \"title\": \"THE SOLUTION\",\n    \"visual\": \"[Specific visual description]\",\n    \"sentence\": \"[Max 15 words - the solution]\"\n  },\n  \"slide3\": {\n    \"title\": \"THE ASK\",\n    \"visual\": \"[Specific visual description - e.g., 'Timeline showing $2M investment returning $5M over 18 months']\",\n    \"sentence\": \"[Max 15 words - clear call to action]\"\n  },\n  \"report\": {\n    \"explanations\": [\n      {\n        \"slides\": \"1-4\",\n        \"title\": \"Section name\",\n        \"cut\": \"What was removed\",\n        \"why\": \"Reason for removal\",\n        \"principle\": \"Which presentation principle\",\n        \"location\": \"Deleted/Appendix\"\n      }\n    ]\n  }\n}`;\n\n// Build comprehensive user prompt\nconst brief = data.projectBrief;\nconst qaContext = data.reviewAndRefine.questions.map((q, i) => {\n  return `Q: ${q.question}\\nA: ${data.userAnswers[i] || 'Not answered'}`;\n}).join('\\n\\n');\n\nconst summaryText = data.summary.map(s => \n  `Slide ${s.slideNumber}: ${s.title}\\n${s.keyPoints}`\n).join('\\n\\n');\n\nconst userPrompt = `ORIGINAL PRESENTATION SUMMARY:\n${summaryText}\n\nBUSINESS CONTEXT:\nPurpose: ${brief.businessPurpose}\nProject Phase: ${brief.projectPhase}\nKey Metrics: ${brief.keyMetrics}\nCurrent Blockers: ${brief.currentBlockers}\n\nCLARIFYING Q&A:\n${qaContext}\n\nBased on all this context, create the final 3-slide executive presentation following the JSON format.\nProvide 5-10 specific explanations in the report about what was cut and why.`;\n\nreturn {\n  projectId: data.projectId,\n  systemPrompt: systemPrompt,\n  userPrompt: userPrompt\n};"
+      },
+      "id": "prepare-stage2-prompt",
+      "name": "Prepare Final Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"anthropic/claude-sonnet-4\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ $json.systemPrompt }}},\n    {\"role\": \"user\", \"content\": {{ $json.userPrompt }}}\n  ],\n  \"max_tokens\": 2500,\n  \"temperature\": 0.7\n}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "call-ai-stage2",
+      "name": "Call AI for Final Slides",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300],
+      "credentials": {
+        "openRouterApi": {
+          "id": "PLACEHOLDER_OPENROUTER",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse final AI response\nconst item = $input.item.json;\nconst projectId = $('Prepare Final Prompt').first().json.projectId;\n\ntry {\n  let content = item.choices[0].message.content;\n  \n  // Remove markdown code blocks\n  content = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  \n  const parsed = JSON.parse(content);\n  \n  if (!parsed.slide1 || !parsed.slide2 || !parsed.slide3) {\n    throw new Error('Missing required slides');\n  }\n  \n  return {\n    projectId: projectId,\n    slides: parsed\n  };\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  throw new Error(`Failed to parse AI response: ${error.message}`);\n}"
+      },
+      "id": "parse-stage2-response",
+      "name": "Parse Final Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://pdf-services:8000/generate-pdf",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"projectId\": \"{{ $json.projectId }}\",\n  \"slide1\": {{ $json.slides.slide1 }},\n  \"slide2\": {{ $json.slides.slide2 }},\n  \"slide3\": {{ $json.slides.slide3 }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-final-pdf",
+      "name": "Generate Final PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "sliderx-generated-dev",
+        "fileName": "={{ $('Parse Final Slides').first().json.projectId }}/presentation-condensed.pdf",
+        "binaryData": true,
+        "options": {
+          "acl": "private"
+        }
+      },
+      "id": "upload-to-s3",
+      "name": "Upload to S3",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "aws": {
+          "id": "PLACEHOLDER_AWS",
+          "name": "AWS S3 SlideRx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate presigned URL for download\nconst projectId = $('Parse Final Slides').first().json.projectId;\nconst s3Response = $input.item.json;\n\n// Construct S3 URL\nconst downloadUrl = `https://sliderx-generated-dev.s3.eu-central-1.amazonaws.com/${projectId}/presentation-condensed.pdf`;\n\nreturn {\n  projectId: projectId,\n  downloadUrl: downloadUrl,\n  slides: $('Parse Final Slides').first().json.slides\n};"
+      },
+      "id": "prepare-final-update",
+      "name": "Prepare Final Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/{{ $json.projectId }}/complete",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"downloadUrl\": \"{{ $json.downloadUrl }}\",\n  \"slides\": {{ $json.slides }},\n  \"status\": \"ready\"\n}",
+        "options": {}
+      },
+      "id": "update-api-ready",
+      "name": "POST to API (ready)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"projectId\": \"{{ $('Prepare Final Update').first().json.projectId }}\",\n  \"status\": \"ready\",\n  \"downloadUrl\": \"{{ $('Prepare Final Update').first().json.downloadUrl }}\",\n  \"message\": \"Final presentation generated successfully\"\n}",
+        "options": {}
+      },
+      "id": "respond-stage2",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2220, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: User Answered": {
+      "main": [[{"node": "Parse User Answers", "type": "main", "index": 0}]]
+    },
+    "Parse User Answers": {
+      "main": [[{"node": "Prepare Final Prompt", "type": "main", "index": 0}]]
+    },
+    "Prepare Final Prompt": {
+      "main": [[{"node": "Call AI for Final Slides", "type": "main", "index": 0}]]
+    },
+    "Call AI for Final Slides": {
+      "main": [[{"node": "Parse Final Slides", "type": "main", "index": 0}]]
+    },
+    "Parse Final Slides": {
+      "main": [[{"node": "Generate Final PDF", "type": "main", "index": 0}]]
+    },
+    "Generate Final PDF": {
+      "main": [[{"node": "Upload to S3", "type": "main", "index": 0}]]
+    },
+    "Upload to S3": {
+      "main": [[{"node": "Prepare Final Update", "type": "main", "index": 0}]]
+    },
+    "Prepare Final Update": {
+      "main": [[{"node": "POST to API (ready)", "type": "main", "index": 0}]]
+    },
+    "POST to API (ready)": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-10-09T09:00:00.000Z",
+  "versionId": "1"
+}

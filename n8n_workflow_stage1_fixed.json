@@ -1,0 +1,190 @@
+{
+  "name": "SlideRx - Stage 1: Initial Processing (Fixed)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-stage1",
+      "name": "Webhook: Receive Job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "stage1-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input from AWS Lambda trigger\nconst body = $input.item.json.body || $input.item.json;\n\nreturn {\n  projectId: body.projectId,\n  s3Bucket: body.s3Bucket || 'sliderx-uploads-dev',\n  s3Key: body.s3Key,\n  projectBrief: body.projectBrief || {}\n};"
+      },
+      "id": "parse-input",
+      "name": "Parse Lambda Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "bucketName": "={{ $json.s3Bucket }}",
+        "fileKey": "={{ $json.s3Key }}",
+        "options": {}
+      },
+      "id": "download-s3",
+      "name": "Download PDF from S3",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "aws": {
+          "id": "PLACEHOLDER_AWS",
+          "name": "AWS S3 SlideRx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://pdf-services:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-text",
+      "name": "Extract Text from PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare AI prompt for initial review\nconst extractedData = $input.item.json;\nconst projectData = $('Parse Lambda Input').first().json;\n\nconst systemPrompt = `You are a presentation strategist trained in Nancy Duarte and Dan Roam principles.\n\nYour task is to:\n1. Generate a per-slide summary of the presentation\n2. Identify 2-4 clarifying questions to ask the user before creating the final 3-slide summary\n\nOutput JSON format:\n{\n  \"summary\": [\n    {\"slideNumber\": 1, \"title\": \"slide title\", \"keyPoints\": \"2-3 sentence summary\"},\n    {\"slideNumber\": 2, \"title\": \"slide title\", \"keyPoints\": \"2-3 sentence summary\"}\n  ],\n  \"reviewAndRefine\": {\n    \"questions\": [\n      {\"question\": \"What is your target audience's technical level?\", \"type\": \"text\"},\n      {\"question\": \"What is the desired outcome of this presentation?\", \"type\": \"text\"}\n    ]\n  }\n}`;\n\nconst projectBrief = projectData.projectBrief;\nconst userPrompt = `PRESENTATION CONTENT:\n${extractedData.fullText}\n\nBUSINESS CONTEXT:\nPurpose: ${projectBrief.businessPurpose || 'Not specified'}\nProject Phase: ${projectBrief.projectPhase || 'Not specified'}\nKey Metrics: ${projectBrief.keyMetrics || 'Not specified'}\nCurrent Blockers: ${projectBrief.currentBlockers || 'Not specified'}\n\nPages: ${extractedData.pageCount}\n\nPlease:\n1. Create a per-slide summary (title + 2-3 sentence summary of key points)\n2. Ask 2-4 clarifying questions that would help create a better 3-slide executive summary`;\n\nreturn {\n  projectId: projectData.projectId,\n  systemPrompt: systemPrompt,\n  userPrompt: userPrompt\n};"
+      },
+      "id": "prepare-stage1-prompt",
+      "name": "Prepare Stage 1 Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"anthropic/claude-sonnet-4\",\n  \"messages\": [\n    {\"role\": \"system\", \"content\": {{ $json.systemPrompt }}},\n    {\"role\": \"user\", \"content\": {{ $json.userPrompt }}}\n  ],\n  \"max_tokens\": 3000,\n  \"temperature\": 0.7\n}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "call-ai-stage1",
+      "name": "Call AI for Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300],
+      "credentials": {
+        "openRouterApi": {
+          "id": "PLACEHOLDER_OPENROUTER",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response\nconst item = $input.item.json;\nconst projectId = $('Prepare Stage 1 Prompt').first().json.projectId;\n\ntry {\n  let content = item.choices[0].message.content;\n  \n  // Remove markdown code blocks if present\n  content = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  \n  const parsed = JSON.parse(content);\n  \n  if (!parsed.summary || !parsed.reviewAndRefine) {\n    throw new Error('Missing required fields in AI response');\n  }\n  \n  return {\n    projectId: projectId,\n    summary: parsed.summary,\n    reviewAndRefine: parsed.reviewAndRefine\n  };\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  throw new Error(`Failed to parse AI response: ${error.message}`);\n}"
+      },
+      "id": "parse-stage1-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/{{ $json.projectId }}/review",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"summary\": {{ $json.summary }},\n  \"reviewAndRefine\": {{ $json.reviewAndRefine }},\n  \"status\": \"needs_review\"\n}",
+        "options": {}
+      },
+      "id": "update-api",
+      "name": "POST to API (needs_review)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"projectId\": \"{{ $('Parse AI Response').first().json.projectId }}\",\n  \"status\": \"needs_review\",\n  \"message\": \"Initial processing complete. Awaiting user answers.\"\n}",
+        "options": {}
+      },
+      "id": "respond-stage1",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Receive Job": {
+      "main": [[{"node": "Parse Lambda Input", "type": "main", "index": 0}]]
+    },
+    "Parse Lambda Input": {
+      "main": [[{"node": "Download PDF from S3", "type": "main", "index": 0}]]
+    },
+    "Download PDF from S3": {
+      "main": [[{"node": "Extract Text from PDF", "type": "main", "index": 0}]]
+    },
+    "Extract Text from PDF": {
+      "main": [[{"node": "Prepare Stage 1 Prompt", "type": "main", "index": 0}]]
+    },
+    "Prepare Stage 1 Prompt": {
+      "main": [[{"node": "Call AI for Review", "type": "main", "index": 0}]]
+    },
+    "Call AI for Review": {
+      "main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]
+    },
+    "Parse AI Response": {
+      "main": [[{"node": "POST to API (needs_review)", "type": "main", "index": 0}]]
+    },
+    "POST to API (needs_review)": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-10-09T09:00:00.000Z",
+  "versionId": "1"
+}

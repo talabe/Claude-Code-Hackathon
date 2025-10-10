@@ -1,0 +1,40 @@
+# N8N Runtime Data
+n8n-data/database.sqlite
+n8n-data/database.sqlite-*
+n8n-data/*.backup-*
+n8n-data/*.log
+n8n-data/crash.journal
+
+# N8N Backups
+n8n-data-backup-*.tar.gz
+*.tar.gz
+
+# Logs
+*.log
+n8n-logs/
+
+# ngrok
+ngrok.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
