@@ -218,7 +218,7 @@ const FollowUp = () => {
   const handleLogout = () => {
     // TODO: Implement actual logout logic
     console.log('Logout clicked');
-    navigate('/upload');
+    navigate('/');
   };
 
   // Loading state

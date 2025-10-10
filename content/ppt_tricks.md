@@ -16,4 +16,6 @@ Use Selection Pane (Home > Select > Selection Pane) to manage overlapping object
 
 Embed fonts (File > Options > Save) so your presentation looks the same on any computer
 
-Press Alt+F5 to start presenting from the current slide instead of the beginning
+Press Shift+F5 to start presenting from the current slide instead of the beginning
+
+Press Alt+F5 to start presenting from the current slide in presenter mode
