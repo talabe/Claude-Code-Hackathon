@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # N8N Workflow Engine
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sliderx-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://gainful-nonvibrating-renay.ngrok-free.dev/
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=sliderx123
+      - DB_TYPE=sqlite
+      - EXECUTIONS_TIMEOUT=300
+      - NODE_OPTIONS=--max-old-space-size=4096
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+      - ./n8n-logs:/home/node/.n8n/logs
+    networks:
+      - sliderx-network
+    depends_on:
+      - pdf-services
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  # PDF Processing Services
+  pdf-services:
+    image: python:3.11-slim
+    container_name: sliderx-pdf-services
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    command: >
+      bash -c "
+        pip install --no-cache-dir fastapi uvicorn PyPDF2 reportlab python-multipart &&
+        uvicorn pdf_services:app --host 0.0.0.0 --port 8000
+      "
+    volumes:
+      - ./pdf_services.py:/app/pdf_services.py
+    networks:
+      - sliderx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
+networks:
+  sliderx-network:
+    driver: bridge

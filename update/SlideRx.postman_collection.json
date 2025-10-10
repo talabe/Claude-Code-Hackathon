@@ -1,0 +1,272 @@
+{
+	"info": {
+		"_postman_id": "db715cd3-1015-4447-845b-76e49e5ae3ee",
+		"name": "SlideRx",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47043650"
+	},
+	"item": [
+		{
+			"name": "UI",
+			"item": [
+				{
+					"name": "1 - Start Project → Get Upload URL",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"businessPurpose\": \"Status Update\",\n    \"projectName\": \"Test Project\",\n    \"projectBrief\": {\n        \"projectPhase\": \"Kickoff phase concluded\",\n        \"keyMetrics\": \"34 user stories created\",\n        \"currentBlockers\": \"None\"\n    },\n    \"fileName\": \"presentation.pdf\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2 - Get Project Details",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3 - Submit Answers",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4 - List My Projects",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-user",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "n8n",
+			"item": [
+				{
+					"name": "Ai -> Follow up Questions",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"test-vitor\",\n  \"summary\": {\n    \"slides\": [\n      {\n        \"index\": 1,\n        \"title\": \"Intro\",\n        \"bullets\": [\"Why this matters\", \"Market opportunity\", \"Company vision\"]\n      }\n    ]\n  },\n  \"reviewAndRefine\": [\n    {\n      \"id\": \"targetAudience\",\n      \"type\": \"select\",\n      \"label\": \"Who is this presentation primarily aimed at?\",\n      \"options\": [\n        \"Investors\",\n        \"Potential customers\",\n        \"Internal leadership\",\n        \"Strategic partners\"\n      ],\n      \"required\": true,\n      \"userAnswer\": \"\"\n    },\n    {\n      \"id\": \"coreMessage\",\n      \"type\": \"longText\",\n      \"label\": \"What is the key message or takeaway you want the audience to remember?\",\n      \"required\": true,\n      \"userAnswer\": \"\"\n    },\n    {\n      \"id\": \"businessGoal\",\n      \"type\": \"select\",\n      \"label\": \"What best describes your main business goal for this presentation?\",\n      \"options\": [\n        \"Fundraising / attracting investors\",\n        \"Product launch or marketing\",\n        \"Internal alignment and strategy\",\n        \"Client acquisition or sales enablement\"\n      ],\n      \"required\": true,\n      \"userAnswer\": \"\"\n    }\n  ]\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36/ai/callback",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36",
+								"ai",
+								"callback"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

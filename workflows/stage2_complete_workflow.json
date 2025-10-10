@@ -1,0 +1,434 @@
+{
+  "name": "SlideRx Stage 2 - Final Presentation Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-stage2",
+      "name": "Webhook Trigger Stage 2",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "sliderx-stage2"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse incoming API payload with full context\nconst body = $input.item.json.body;\n\n// Extract all required data\nconst projectId = body.projectId;\nconst userId = body.userId;\nconst s3Key = body.s3Key;\nconst projectBrief = body.projectBrief;\nconst summary = body.summary;\nconst reviewAndRefine = body.reviewAndRefine;\n\n// Extract user answers from reviewAndRefine\nconst targetAudience = reviewAndRefine.find(q => q.id === 'targetAudience')?.userAnswer || '';\nconst coreMessage = reviewAndRefine.find(q => q.id === 'coreMessage')?.userAnswer || '';\nconst businessGoal = reviewAndRefine.find(q => q.id === 'businessGoal')?.userAnswer || '';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Key,\n    projectBrief,\n    summary,\n    reviewAndRefine: {\n      targetAudience,\n      coreMessage,\n      businessGoal\n    },\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "parse-stage2-input",
+      "name": "Parse API Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare comprehensive prompt for AI to generate 3-slide presentation\nconst data = $input.item.json;\n\n// Build context from all available data\nconst slideSummaries = data.summary.slides\n  .map(s => `Slide ${s.index}: ${s.title}\\n${s.bullets.join('\\n')}`)\n  .join('\\n\\n');\n\nconst prompt = `You are creating a concise 3-slide executive summary presentation.\n\n# ORIGINAL PRESENTATION SUMMARY\n${slideSummaries}\n\n# BUSINESS CONTEXT\n- Success Metric: ${data.projectBrief.successMetric}\n- Industry: ${data.projectBrief.industry}\n- Problem Solved: ${data.projectBrief.problemSolved}\n\n# USER GUIDANCE\n- Target Audience: ${data.reviewAndRefine.targetAudience}\n- Core Message: ${data.reviewAndRefine.coreMessage}\n- Business Goal: ${data.reviewAndRefine.businessGoal}\n\n# TASK\nCreate exactly 3 slides following this structure:\n\n**Slide 1: THE PROBLEM**\n- Title: Exactly \"THE PROBLEM\"\n- Visual: A brief description of what visual element should appear (diagram, chart, icon, etc.)\n- Sentence: One powerful sentence that captures the core problem\n\n**Slide 2: THE SOLUTION**\n- Title: Exactly \"THE SOLUTION\"\n- Visual: A brief description of what visual element should appear\n- Sentence: One powerful sentence that captures your solution\n\n**Slide 3: THE ASK**\n- Title: Exactly \"THE ASK\"\n- Visual: A brief description of what visual element should appear\n- Sentence: One powerful sentence that states what you're asking for\n\n# OUTPUT FORMAT (JSON only)\n{\n  \"slide1\": {\n    \"title\": \"THE PROBLEM\",\n    \"visual\": \"Description of visual\",\n    \"sentence\": \"One impactful sentence\"\n  },\n  \"slide2\": {\n    \"title\": \"THE SOLUTION\",\n    \"visual\": \"Description of visual\",\n    \"sentence\": \"One impactful sentence\"\n  },\n  \"slide3\": {\n    \"title\": \"THE ASK\",\n    \"visual\": \"Description of visual\",\n    \"sentence\": \"One impactful sentence\"\n  }\n}\n\nProvide ONLY the JSON output, no other text.`;\n\nreturn {\n  json: {\n    projectId: data.projectId,\n    userId: data.userId,\n    prompt,\n    context: data\n  }\n};"
+      },
+      "id": "prepare-ai-prompt",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.openRouterApiKey}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-3.5-sonnet"
+            },
+            {
+              "name": "messages",
+              "value": "={{[\n  {\n    role: 'user',\n    content: $json.prompt\n  }\n]}}"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ai-generation",
+      "name": "AI Generate 3 Slides",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "2",
+          "name": "OpenRouter API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse AI response and format for PDF generation\nconst aiResponse = $input.item.json;\nconst projectId = $node['Parse API Payload'].json.projectId;\n\nlet slides;\ntry {\n  const content = aiResponse.choices[0].message.content;\n  // Extract JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    slides = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in AI response');\n  }\n  \n  // Validate structure\n  if (!slides.slide1 || !slides.slide2 || !slides.slide3) {\n    throw new Error('Missing slides in AI response');\n  }\n  \n  // Ensure titles are correct\n  slides.slide1.title = 'THE PROBLEM';\n  slides.slide2.title = 'THE SOLUTION';\n  slides.slide3.title = 'THE ASK';\n  \n} catch (error) {\n  // Fallback slides if parsing fails\n  console.error('AI parsing error:', error.message);\n  slides = {\n    slide1: {\n      title: 'THE PROBLEM',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    },\n    slide2: {\n      title: 'THE SOLUTION',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    },\n    slide3: {\n      title: 'THE ASK',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    }\n  };\n}\n\nreturn {\n  json: {\n    projectId,\n    slide1: slides.slide1,\n    slide2: slides.slide2,\n    slide3: slides.slide3\n  }\n};"
+      },
+      "id": "format-slides",
+      "name": "Format Slides for PDF",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://pdf-services:8000/generate-pdf",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({\n  projectId: $json.projectId,\n  slide1: $json.slide1,\n  slide2: $json.slide2,\n  slide3: $json.slide3\n})}}",
+        "options": {
+          "timeout": 60000,\n          "response": {\n            "response": {\n              \"responseFormat\": \"file\"\n            }\n          }\n        }\n      },
+      "id": "pdf-generate",
+      "name": "PDF Service - Generate PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare S3 upload parameters\nconst projectId = $node['Parse API Payload'].json.projectId;\nconst userId = $node['Parse API Payload'].json.userId;\n\n// S3 key format: outputs/{userId}/{projectId}/result.pdf\nconst s3Key = `outputs/${userId}/${projectId}/result.pdf`;\nconst s3Bucket = 'sliderx-outputs-dev';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Bucket,\n    s3Key\n  },\n  binary: {\n    data: $input.item.binary.data\n  }\n};"
+      },
+      "id": "prepare-s3-upload",
+      "name": "Prepare S3 Upload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "={{$json.s3Bucket}}",
+        "fileKey": "={{$json.s3Key}}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "options": {
+          "contentType": "application/pdf"\n        }\n      },
+      "id": "s3-upload",
+      "name": "S3 Upload Result PDF",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "aws": {
+          "id": "1",
+          "name": "AWS S3 SlideRx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{{\n  success: true,\n  projectId: $node['Parse API Payload'].json.projectId,\n  s3Key: $json.s3Key,\n  message: 'Stage 2 completed - PDF uploaded to S3',\n  status: 'ready'\n}}}",
+        "options": {}
+      },
+      "id": "webhook-response-success",
+      "name": "Webhook Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-api-error",
+      "name": "Check API Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-ai-gen-error",
+      "name": "Check AI Generation Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-pdf-gen-error",
+      "name": "Check PDF Generation Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-s3-upload-error",
+      "name": "Check S3 Upload Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1650, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log error and format error response\nconst errorNode = $input.item.json;\nconst projectId = $node['Parse API Payload']?.json?.projectId || 'unknown';\n\nconst errorMessage = errorNode.error?.message || errorNode.message || 'Unknown error';\nconst errorStep = $node.name;\n\nconsole.error(`Stage 2 Error at ${errorStep}:`, errorMessage);\n\nreturn {\n  json: {\n    success: false,\n    projectId,\n    error: errorMessage,\n    failedAt: errorStep,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "handle-stage2-error",
+      "name": "Handle Stage 2 Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 600]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "responseCode": 500,
+        "options": {}
+      },
+      "id": "webhook-error-response",
+      "name": "Webhook Response - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 600]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Parse API Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse API Payload": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Generate 3 Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate 3 Slides": {
+      "main": [
+        [
+          {
+            "node": "Format Slides for PDF",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check AI Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slides for PDF": {
+      "main": [
+        [
+          {
+            "node": "PDF Service - Generate PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Service - Generate PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare S3 Upload",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check PDF Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare S3 Upload": {
+      "main": [
+        [
+          {
+            "node": "S3 Upload Result PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Upload Result PDF": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check S3 Upload Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check AI Generation Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check PDF Generation Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check S3 Upload Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Stage 2 Error": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-10T00:00:00.000Z",
+  "versionId": "1"
+}
