@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "SlideRx N8N Webhooks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Stage 1 - Initial Processing",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"projectId\": \"test-123\",\n  \"s3Bucket\": \"sliderx-uploads-dev\",\n  \"s3Key\": \"uploads/test-user/test-123/presentation.pdf\",\n  \"projectBrief\": {\n    \"businessPurpose\": \"Status Update\",\n    \"projectPhase\": \"Kickoff phase concluded\",\n    \"keyMetrics\": \"34 user stories created\",\n    \"currentBlockers\": \"None\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://gainful-nonvibrating-renay.ngrok-free.dev/webhook/sliderx-stage1",
+          "protocol": "https",
+          "host": [
+            "gainful-nonvibrating-renay",
+            "ngrok-free",
+            "dev"
+          ],
+          "path": [
+            "webhook",
+            "sliderx-stage1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Stage 2 - Final Generation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"projectId\": \"test-123\",\n  \"projectBrief\": {\n    \"businessPurpose\": \"Status Update\",\n    \"projectPhase\": \"Kickoff phase concluded\",\n    \"keyMetrics\": \"34 user stories created\",\n    \"currentBlockers\": \"None\"\n  },\n  \"reviewAndRefine\": {\n    \"questions\": [\n      {\n        \"question\": \"What is your target audience's technical level?\",\n        \"type\": \"text\"\n      },\n      {\n        \"question\": \"What is the desired outcome of this presentation?\",\n        \"type\": \"text\"\n      }\n    ]\n  },\n  \"summary\": [\n    {\n      \"slideNumber\": 1,\n      \"title\": \"Project Kickoff Summary\",\n      \"keyPoints\": \"Team assembled, 34 user stories created, initial planning complete\"\n    },\n    {\n      \"slideNumber\": 2,\n      \"title\": \"Technical Architecture\",\n      \"keyPoints\": \"Cloud infrastructure selected, database schema designed\"\n    }\n  ],\n  \"userAnswers\": [\n    \"Executive leadership team with mixed technical backgrounds\",\n    \"Get approval for Phase 2 funding and timeline extension\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://gainful-nonvibrating-renay.ngrok-free.dev/webhook/sliderx-stage2",
+          "protocol": "https",
+          "host": [
+            "gainful-nonvibrating-renay",
+            "ngrok-free",
+            "dev"
+          ],
+          "path": [
+            "webhook",
+            "sliderx-stage2"
+          ]
+        }
+      }
+    }
+  ]
+}

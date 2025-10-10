@@ -13,6 +13,7 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - N8N_SECURE_COOKIE=false
+      - N8N_PROXY_HOPS=1
       - NODE_ENV=production
       - WEBHOOK_URL=https://gainful-nonvibrating-renay.ngrok-free.dev/
       - N8N_BASIC_AUTH_ACTIVE=true

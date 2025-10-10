@@ -112,7 +112,14 @@
         "specifyBody": "json",
         "jsonBody": "={{JSON.stringify({\n  projectId: $json.projectId,\n  slide1: $json.slide1,\n  slide2: $json.slide2,\n  slide3: $json.slide3\n})}}",
         "options": {
-          "timeout": 60000,\n          "response": {\n            "response": {\n              \"responseFormat\": \"file\"\n            }\n          }\n        }\n      },
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
       "id": "pdf-generate",
       "name": "PDF Service - Generate PDF",
       "type": "n8n-nodes-base.httpRequest",
@@ -137,7 +144,9 @@
         "binaryData": true,
         "binaryPropertyName": "data",
         "options": {
-          "contentType": "application/pdf"\n        }\n      },
+          "contentType": "application/pdf"
+        }
+      },
       "id": "s3-upload",
       "name": "S3 Upload Result PDF",
       "type": "n8n-nodes-base.awsS3",

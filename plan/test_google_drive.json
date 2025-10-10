@@ -1,0 +1,70 @@
+{
+  "name": "Google Drive Test - List Files",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "options": {
+          "fields": ["id", "name", "mimeType", "size", "modifiedTime"]
+        },
+        "limit": 10
+      },
+      "id": "list-drive-files",
+      "name": "List Google Drive Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [460, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "PLACEHOLDER",
+          "name": "Google Drive Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Display the results\nconst items = $input.all();\n\nif (items.length === 0) {\n  return [{\n    json: {\n      success: true,\n      message: \"No files found or empty Drive\",\n      fileCount: 0\n    }\n  }];\n}\n\nconst files = items.map(item => ({\n  name: item.json.name,\n  id: item.json.id,\n  type: item.json.mimeType,\n  size: item.json.size ? `${Math.round(item.json.size / 1024)} KB` : 'N/A'\n}));\n\nreturn [{\n  json: {\n    success: true,\n    message: \"Successfully connected to Google Drive!\",\n    fileCount: files.length,\n    files: files\n  }\n}];"
+      },
+      "id": "format-result",
+      "name": "Format Result",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Google Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Google Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Format Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
