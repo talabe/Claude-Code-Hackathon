@@ -160,12 +160,11 @@ const Upload = () => {
       // Step 1: Start Project
       const projectData = {
         businessPurpose,
-        projectPhase: followUpAnswers['project-phase'] || followUpAnswers['report-type'] || '',
-        keyMetrics: followUpAnswers['key-metrics'] || followUpAnswers['success-metric'] || '',
-        currentBlockers: followUpAnswers['blockers'] || followUpAnswers['urgency'] || '',
+        projectBrief: followUpAnswers,
         fileName: selectedFile.name
       };
 
+      console.log('followUpAnswers:', followUpAnswers);  // ← ADD THIS
       console.log('Starting project with data:', projectData);
 
       const projectResponse = await fetch(`${API_BASE_URL}/projects`, {

@@ -155,7 +155,24 @@ const Processing = () => {
         const data = await response.json();
         console.log('Project status:', data.status);
 
-        // If completed and minimum loading time has passed, navigate to results
+        // Check 1: Are there unanswered follow-up questions?
+        if (data.reviewAndRefine && Array.isArray(data.reviewAndRefine)) {
+          console.log('reviewAndRefine detected:', data.reviewAndRefine);
+
+          const hasUnansweredQuestions = data.reviewAndRefine.some(
+            q => !q.userAnswer || q.userAnswer.trim() === ""
+          );
+
+          if (hasUnansweredQuestions && minLoadingTimeMet && isSubscribed) {
+            console.log('Unanswered follow-up questions found. Navigating to follow-up page...');
+            navigate(`/followup/${projectId}`);
+            return;
+          } else if (!hasUnansweredQuestions) {
+            console.log('All follow-up questions answered. Continuing to check completion status...');
+          }
+        }
+
+        // Check 2: If completed and minimum loading time has passed, navigate to results
         if (data.status === 'completed' && minLoadingTimeMet && isSubscribed) {
           console.log('Processing complete. Navigating to results...');
           navigate(`/results/${projectId}`);
