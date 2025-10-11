@@ -12,18 +12,24 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [250, 300],
+      "position": [
+        250,
+        300
+      ],
       "webhookId": "sliderx-stage1"
     },
     {
       "parameters": {
-        "functionCode": "// Parse incoming Lambda payload\nconst body = $input.item.json.body;\n\n// Extract parameters\nconst projectId = body.projectId;\nconst s3Bucket = body.s3Bucket || 'sliderx-uploads-dev';\nconst s3Key = body.s3Key;\nconst projectBrief = body.projectBrief;\n\n// Extract userId from s3Key path: uploads/{userId}/{projectId}/...\nconst pathParts = s3Key.split('/');\nconst userId = pathParts[1];\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Bucket,\n    s3Key,\n    projectBrief,\n    timestamp: new Date().toISOString()\n  }\n};"
+        "functionCode": "// Parse incoming Lambda payload\nconst body = $input.item.json.body;\n\n// Extract parameters\nconst projectId = body.projectId;\nconst s3Bucket = body.s3Bucket || 'sliderx-uploads-dev';\nconst s3Key = body.fileKey;  // Victor's update: use fileKey instead of s3Key\nconst projectBrief = body.projectBrief;\n\n// Extract userId from s3Key path: uploads/{userId}/{projectId}/...\nconst pathParts = s3Key.split('/');\nconst userId = pathParts[1];\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Bucket,\n    s3Key,\n    projectBrief,\n    timestamp: new Date().toISOString()\n  }\n};"
       },
       "id": "parse-input",
       "name": "Parse Lambda Payload",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [450, 300]
+      "position": [
+        450,
+        300
+      ]
     },
     {
       "parameters": {
@@ -36,7 +42,10 @@
       "name": "S3 Download PDF",
       "type": "n8n-nodes-base.awsS3",
       "typeVersion": 1,
-      "position": [650, 300],
+      "position": [
+        650,
+        300
+      ],
       "credentials": {
         "aws": {
           "id": "1",
@@ -46,38 +55,16 @@
     },
     {
       "parameters": {
-        "url": "http://pdf-services:8000/extract-text",
-        "method": "POST",
-        "sendBody": true,
-        "specifyBody": "formData",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "file",
-              "inputDataFieldName": "data",
-              "parameterType": "formBinaryData"
-            }
-          ]
-        },
-        "options": {
-          "timeout": 60000
-        }
+        "functionCode": "// Convert PDF binary to base64 for Claude API with Vision\nconst projectBrief = $node['Parse Lambda Payload'].json.projectBrief;\nconst projectId = $node['Parse Lambda Payload'].json.projectId;\nconst userId = $node['Parse Lambda Payload'].json.userId;\n\n// Get the binary data (PDF file from S3)\nconst binaryPropertyName = Object.keys($input.item.binary)[0];\nconst binaryData = $input.item.binary[binaryPropertyName];\n\n// Convert binary buffer to base64\n// N8N stores binary as Buffer, need to convert to base64 string\nlet base64Pdf;\nif (binaryData.data) {\n  // If data property exists, use it\n  base64Pdf = binaryData.data;\n} else if (Buffer.isBuffer(binaryData)) {\n  // If it's a Buffer directly, convert to base64\n  base64Pdf = binaryData.toString('base64');\n} else {\n  // Fallback: try to get from the binary object itself\n  const buffer = await this.helpers.getBinaryDataBuffer(0, binaryPropertyName);\n  base64Pdf = buffer.toString('base64');\n}\n\nconst mimeType = binaryData.mimeType || 'application/pdf';\nconst fileName = binaryData.fileName || 'presentation.pdf';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    projectBrief,\n    pdfBase64: base64Pdf,\n    mimeType: mimeType,\n    fileName: fileName\n  }\n};"
       },
-      "id": "pdf-extract",
-      "name": "PDF Service - Extract Text",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
-      "position": [850, 300]
-    },
-    {
-      "parameters": {
-        "functionCode": "// Combine extracted text with project context\nconst extractedText = $input.item.json.text || $input.item.json.extractedText;\nconst projectBrief = $node['Parse Lambda Payload'].json.projectBrief;\nconst projectId = $node['Parse Lambda Payload'].json.projectId;\nconst userId = $node['Parse Lambda Payload'].json.userId;\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    extractedText,\n    projectBrief,\n    textLength: extractedText?.length || 0\n  }\n};"
-      },
-      "id": "prepare-ai-input",
-      "name": "Prepare AI Input",
+      "id": "convert-pdf-base64",
+      "name": "Convert PDF to Base64",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1050, 300]
+      "position": [
+        750,
+        300
+      ]
     },
     {
       "parameters": {
@@ -97,27 +84,20 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "model",
-              "value": "anthropic/claude-3.5-sonnet"
-            },
-            {
-              "name": "messages",
-              "value": "={{[\n  {\n    role: 'user',\n    content: `You are analyzing a business presentation PDF. Extract a slide-by-slide summary.\n\nPresentation Text:\n${$json.extractedText}\n\nBusiness Context:\n- Success Metric: ${$json.projectBrief.successMetric}\n- Industry: ${$json.projectBrief.industry}\n- Problem Solved: ${$json.projectBrief.problemSolved}\n\nProvide output in this JSON format:\n{\n  \"slides\": [\n    {\n      \"index\": 1,\n      \"title\": \"Slide Title\",\n      \"bullets\": [\"Key point 1\", \"Key point 2\", \"Key point 3\"]\n    }\n  ]\n}\n\nAnalyze each slide and extract the most important points as bullets.`\n  }\n]}}"
-            }
-          ]
-        },
+        "specifyBody": "json",
         "options": {
           "timeout": 120000
-        }
+        },
+        "jsonBody": "={{ JSON.stringify({ model: 'anthropic/claude-3-5-sonnet', max_tokens: 4096, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: $json.mimeType, data: $json.pdfBase64 } }, { type: 'text', text: 'You are analyzing a business presentation PDF. Analyze both text AND visual elements (charts, graphs, images, diagrams).\\n\\nBusiness Context:\\n- Success Metric: ' + $json.projectBrief.successMetric + '\\n- Industry: ' + $json.projectBrief.industry + '\\n- Problem Solved: ' + $json.projectBrief.problemSolved + '\\n\\nFor each slide, provide:\\n1. Slide title\\n2. Key text points (bullets)\\n3. Visual description (describe any charts, graphs, images, or diagrams)\\n\\nProvide output in this JSON format:\\n{\\n  \"slides\": [\\n    {\\n      \"index\": 1,\\n      \"title\": \"Slide Title\",\\n      \"bullets\": [\"Key point 1\", \"Key point 2\", \"Key point 3\"],\\n      \"visualDescription\": \"Bar chart showing 300% revenue growth, blue gradient background\"\\n    }\\n  ]\\n}\\n\\nAnalyze each slide carefully, paying special attention to visual elements like charts and graphs.' }] }] }) }}"
       },
       "id": "ai-analysis",
       "name": "AI Analysis - OpenRouter",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1250, 300],
+      "position": [
+        950,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "2",
@@ -133,7 +113,10 @@
       "name": "Format API Callback",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1450, 300]
+      "position": [
+        1150,
+        300
+      ]
     },
     {
       "parameters": {
@@ -163,19 +146,25 @@
       "name": "POST to API Callback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1650, 300]
+      "position": [
+        1350,
+        300
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{{\n  success: true,\n  projectId: $node['Parse Lambda Payload'].json.projectId,\n  message: 'Stage 1 completed successfully',\n  status: 'needs_review'\n}}}",
+        "responseBody": "={{ { success: true, projectId: $node['Parse Lambda Payload'].json.projectId, message: 'Stage 1 completed successfully', status: 'needs_review' } }}",
         "options": {}
       },
       "id": "webhook-response",
       "name": "Webhook Response - Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1850, 300]
+      "position": [
+        1550,
+        300
+      ]
     },
     {
       "parameters": {
@@ -192,7 +181,10 @@
       "name": "Check S3 Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [650, 500],
+      "position": [
+        650,
+        500
+      ],
       "alwaysOutputData": false
     },
     {
@@ -210,7 +202,10 @@
       "name": "Check Extract Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [850, 500],
+      "position": [
+        850,
+        500
+      ],
       "alwaysOutputData": false
     },
     {
@@ -228,7 +223,10 @@
       "name": "Check AI Error",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [1250, 500],
+      "position": [
+        1250,
+        500
+      ],
       "alwaysOutputData": false
     },
     {
@@ -239,7 +237,10 @@
       "name": "Handle Error",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1050, 600]
+      "position": [
+        1050,
+        600
+      ]
     },
     {
       "parameters": {
@@ -252,7 +253,10 @@
       "name": "Webhook Response - Error",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1250, 600]
+      "position": [
+        1250,
+        600
+      ]
     }
   ],
   "connections": {
@@ -282,39 +286,12 @@
       "main": [
         [
           {
-            "node": "PDF Service - Extract Text",
+            "node": "Convert PDF to Base64",
             "type": "main",
             "index": 0
           },
           {
             "node": "Check S3 Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "PDF Service - Extract Text": {
-      "main": [
-        [
-          {
-            "node": "Prepare AI Input",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Check Extract Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare AI Input": {
-      "main": [
-        [
-          {
-            "node": "AI Analysis - OpenRouter",
             "type": "main",
             "index": 0
           }
@@ -397,6 +374,17 @@
         [
           {
             "node": "Webhook Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert PDF to Base64": {
+      "main": [
+        [
+          {
+            "node": "AI Analysis - OpenRouter",
             "type": "main",
             "index": 0
           }

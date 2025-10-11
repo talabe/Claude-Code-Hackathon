@@ -37,8 +37,10 @@
     },
     {
       "parameters": {
-        "url": "https://openrouter.ai/api/v1/chat/completions",
         "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -49,26 +51,20 @@
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx N8N Workflow"
             }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "model",
-              "value": "anthropic/claude-3.5-sonnet"
-            },
-            {
-              "name": "messages",
-              "value": "={{[\n  {\n    role: 'user',\n    content: $json.prompt\n  }\n]}}"
-            },
-            {
-              "name": "temperature",
-              "value": "0.7"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'anthropic/claude-sonnet-4.5',\n  max_tokens: 4096,\n  temperature: 0.7,\n  messages: [{\n    role: 'user',\n    content: $json.prompt\n  }]\n}) }}",
         "options": {
           "timeout": 120000
         }
@@ -79,9 +75,9 @@
       "typeVersion": 3,
       "position": [850, 300],
       "credentials": {
-        "httpHeaderAuth": {
-          "id": "2",
-          "name": "OpenRouter API"
+        "openRouterApi": {
+          "id": "Fb6D2B2ICq74Z4Fo",
+          "name": "OpenRouter account"
         }
       }
     },
