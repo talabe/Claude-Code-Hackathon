@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Parse incoming API payload with full context\nconst body = $input.item.json.body;\n\n// Extract all required data\nconst projectId = body.projectId;\nconst userId = body.userId;\nconst s3Key = body.s3Key;\nconst projectBrief = body.projectBrief;\nconst summary = body.summary;\nconst reviewAndRefine = body.reviewAndRefine;\n\n// Extract user answers from reviewAndRefine\nconst targetAudience = reviewAndRefine.find(q => q.id === 'targetAudience')?.userAnswer || '';\nconst coreMessage = reviewAndRefine.find(q => q.id === 'coreMessage')?.userAnswer || '';\nconst businessGoal = reviewAndRefine.find(q => q.id === 'businessGoal')?.userAnswer || '';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Key,\n    projectBrief,\n    summary,\n    reviewAndRefine: {\n      targetAudience,\n      coreMessage,\n      businessGoal\n    },\n    timestamp: new Date().toISOString()\n  }\n};"
+        "functionCode": "// Parse incoming API payload with full context\nconst body = $input.item.json.body;\n\n// Extract all required data\nconst projectId = body.projectId;\nconst userId = body.userId;\nconst s3Key = body.s3Key;\nconst projectBrief = body.projectBrief || {};\nconst summary = body.summary || {};\nconst reviewAndRefine = body.reviewAndRefine || [];\n\n// Extract user answers from reviewAndRefine with validation\nlet targetAudience = '';\nlet coreMessage = '';\nlet businessGoal = '';\n\nif (Array.isArray(reviewAndRefine)) {\n  const targetAudQ = reviewAndRefine.find(q => q.id === 'targetAudience');\n  const coreMessageQ = reviewAndRefine.find(q => q.id === 'coreMessage');\n  const businessGoalQ = reviewAndRefine.find(q => q.id === 'businessGoal');\n  \n  targetAudience = targetAudQ?.userAnswer || '';\n  coreMessage = coreMessageQ?.userAnswer || '';\n  businessGoal = businessGoalQ?.userAnswer || '';\n}\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Key,\n    projectBrief,\n    summary,\n    reviewAndRefine: {\n      targetAudience,\n      coreMessage,\n      businessGoal\n    },\n    timestamp: new Date().toISOString()\n  }\n};"
       },
       "id": "parse-stage2-input",
       "name": "Parse API Payload",
@@ -158,7 +158,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{{\n  success: true,\n  projectId: $node['Parse API Payload'].json.projectId,\n  s3Key: $json.s3Key,\n  message: 'Stage 2 completed - PDF uploaded to S3',\n  status: 'ready'\n}}}",
+        "responseBody": "={{ { success: true, projectId: $node['Parse API Payload'].json.projectId, s3Key: $json.s3Key, message: 'Stage 2 completed - PDF uploaded to S3', status: 'ready' } }}",
         "options": {}
       },
       "id": "webhook-response-success",
