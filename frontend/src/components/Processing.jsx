@@ -173,7 +173,7 @@ const Processing = () => {
         }
 
         // Check 2: If completed and minimum loading time has passed, navigate to results
-        if (data.status === 'completed' && minLoadingTimeMet && isSubscribed) {
+        if ((data.status === 'completed' || data.status === 'complete') && minLoadingTimeMet && isSubscribed) {
           console.log('Processing complete. Navigating to results...');
           navigate(`/results/${projectId}`);
         }
