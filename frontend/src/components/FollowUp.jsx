@@ -164,7 +164,9 @@ const FollowUp = () => {
     setError('');
 
     try {
-      console.log('Submitting answers:', answers);
+      console.log('=== SUBMITTING FOLLOW-UP ANSWERS ===');
+      console.log('1. ProjectId:', projectId);
+      console.log('2. Answers object:', answers);
 
       // Build reviewAndRefine array with answers
       const reviewAndRefineWithAnswers = questions.map(q => ({
@@ -176,34 +178,46 @@ const FollowUp = () => {
         userAnswer: answers[q.id]
       }));
 
+      console.log('3. Built reviewAndRefine array:', reviewAndRefineWithAnswers);
+
+      const requestBody = {
+        reviewAndRefine: reviewAndRefineWithAnswers
+      };
+
+      console.log('4. Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('5. URL:', `${API_BASE_URL}/projects/${projectId}`);
+
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': USER_ID
         },
-        body: JSON.stringify({
-          reviewAndRefine: reviewAndRefineWithAnswers
-        })
+        body: JSON.stringify(requestBody)
       });
+
+      console.log('6. Response status:', response.status);
+      console.log('7. Response ok:', response.ok);
 
       if (!response.ok) {
         throw new Error('Failed to submit answers. Please try again.');
       }
 
-      console.log('Answers submitted successfully');
+      console.log('8. ✅ Answers submitted successfully');
 
       // Show success message briefly before navigating
       setSuccessMessage('Answers submitted! Refining your summary...');
 
       // Navigate back to processing page after a brief delay
       setTimeout(() => {
-        console.log(`Navigating to /processing/${projectId}`);
+        console.log(`9. Navigating to /processing/${projectId}`);
         navigate(`/processing/${projectId}`);
       }, 1500);
 
     } catch (err) {
-      console.error('Error submitting answers:', err);
+      console.error('10. ❌ ERROR:', err);
+      console.error('11. Error message:', err.message);
+      console.error('12. Error name:', err.name);
       setError(err.message || 'Failed to submit answers. Please try again.');
       setSubmitting(false);
     }
