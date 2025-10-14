@@ -1,0 +1,426 @@
+{
+	"info": {
+		"_postman_id": "db715cd3-1015-4447-845b-76e49e5ae3ee",
+		"name": "SlideRx",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47043650"
+	},
+	"item": [
+		{
+			"name": "UI",
+			"item": [
+				{
+					"name": "1 - Start Project → Get Upload URL",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"businessPurpose\": \"Status Update\",\n    \"projectName\": \"Test Project\",\n    \"projectBrief\": {\n        \"projectPhase\": \"Kickoff phase concluded\",\n        \"keyMetrics\": \"34 user stories created\",\n        \"currentBlockers\": \"None\"\n    },\n    \"fileName\": \"presentation.pdf\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2 - Get Project Details",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3 - Submit Answers",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4 - List My Projects",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-user",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "n8n",
+			"item": [
+				{
+					"name": "Stage 1 - Initial Processing (Local)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"body\": {\n    \"projectId\": \"test-project-{{$timestamp}}\",\n    \"s3Bucket\": \"sliderx-uploads-dev\",\n    \"s3Key\": \"uploads/test-user/test-project-123/presentation.pdf\",\n    \"projectBrief\": {\n      \"businessPurpose\": \"We are developing an AI-powered analytics platform for e-commerce businesses to optimize their marketing spend and increase customer lifetime value.\",\n      \"projectPhase\": \"MVP Development - We have completed initial market research and are building the core product features. Currently seeking seed funding to scale engineering team.\",\n      \"keyMetrics\": \"- 50 businesses in pilot program\\n- 23% average improvement in ROAS\\n- $2.1M in annual contract value\\n- 6-month average customer retention\",\n      \"currentBlockers\": \"Need $1.5M seed funding to:\\n1. Expand engineering team from 3 to 8 developers\\n2. Build enterprise security features for Fortune 500 prospects\\n3. Scale cloud infrastructure for 500+ customers\"\n    }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5678/webhook/sliderx-stage1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5678",
+							"path": [
+								"webhook",
+								"sliderx-stage1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stage 1 - Initial Processing (ngrok)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"body\": {\n    \"projectId\": \"test-project-{{$timestamp}}\",\n    \"s3Bucket\": \"sliderx-uploads-dev\",\n    \"s3Key\": \"uploads/test-user/test-project-123/presentation.pdf\",\n    \"projectBrief\": {\n      \"businessPurpose\": \"We are developing an AI-powered analytics platform for e-commerce businesses to optimize their marketing spend and increase customer lifetime value.\",\n      \"projectPhase\": \"MVP Development - We have completed initial market research and are building the core product features. Currently seeking seed funding to scale engineering team.\",\n      \"keyMetrics\": \"- 50 businesses in pilot program\\n- 23% average improvement in ROAS\\n- $2.1M in annual contract value\\n- 6-month average customer retention\",\n      \"currentBlockers\": \"Need $1.5M seed funding to:\\n1. Expand engineering team from 3 to 8 developers\\n2. Build enterprise security features for Fortune 500 prospects\\n3. Scale cloud infrastructure for 500+ customers\"\n    }\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage1",
+							"protocol": "https",
+							"host": [
+								"YOUR-NGROK-URL",
+								"ngrok-free",
+								"dev"
+							],
+							"path": [
+								"webhook",
+								"sliderx-stage1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stage 2 - Final Generation (Local)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": \"test-project-{{$timestamp}}\",\n  \"projectBrief\": {\n    \"businessPurpose\": \"We are developing an AI-powered analytics platform for e-commerce businesses to optimize their marketing spend and increase customer lifetime value.\",\n    \"projectPhase\": \"MVP Development - We have completed initial market research and are building the core product features. Currently seeking seed funding to scale engineering team.\",\n    \"keyMetrics\": \"- 50 businesses in pilot program\\n- 23% average improvement in ROAS\\n- $2.1M in annual contract value\\n- 6-month average customer retention\",\n    \"currentBlockers\": \"Need $1.5M seed funding to:\\n1. Expand engineering team from 3 to 8 developers\\n2. Build enterprise security features for Fortune 500 prospects\\n3. Scale cloud infrastructure for 500+ customers\"\n  },\n  \"summary\": \"Early-stage B2B SaaS company that helps e-commerce businesses optimize marketing ROI through AI-powered analytics. Currently has strong pilot metrics (50 customers, 23% ROAS improvement) and needs seed funding to scale engineering team and build enterprise features.\",\n  \"reviewAndRefine\": {\n    \"targetAudienceClarity\": \"Who is the ideal customer profile? Are you targeting SMB e-commerce or enterprise retail?\",\n    \"competitiveDifferentiation\": \"What makes your AI analytics superior to existing solutions like Google Analytics 4 or Segment?\",\n    \"implementationTimeline\": \"What are the key milestones for the next 12-18 months?\",\n    \"riskMitigation\": \"What are the main technical or market risks, and how will you address them?\"\n  },\n  \"userAnswers\": {\n    \"targetAudienceClarity\": \"We target mid-market e-commerce businesses with $5M-$50M annual revenue. These companies have complex marketing stacks but lack dedicated data science teams.\",\n    \"competitiveDifferentiation\": \"Unlike GA4 which just reports data, we provide prescriptive recommendations. Our AI identifies which marketing channels to increase/decrease spend on, predicting customer lifetime value within 48 hours of first purchase.\",\n    \"implementationTimeline\": \"Q2 2025: Enterprise security certification\\nQ3 2025: 200 paying customers\\nQ4 2025: Series A fundraising\\nQ1 2026: International expansion\",\n    \"riskMitigation\": \"Technical risk: Using proven ML models (not research). Market risk: Partnering with Shopify and WooCommerce to reduce customer acquisition costs. Team risk: Founders have 15+ years combined experience in MarTech.\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5678/webhook/sliderx-stage2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5678",
+							"path": [
+								"webhook",
+								"sliderx-stage2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stage 2 - Final Generation (ngrok)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"projectId\": \"test-project-{{$timestamp}}\",\n  \"projectBrief\": {\n    \"businessPurpose\": \"We are developing an AI-powered analytics platform for e-commerce businesses to optimize their marketing spend and increase customer lifetime value.\",\n    \"projectPhase\": \"MVP Development - We have completed initial market research and are building the core product features. Currently seeking seed funding to scale engineering team.\",\n    \"keyMetrics\": \"- 50 businesses in pilot program\\n- 23% average improvement in ROAS\\n- $2.1M in annual contract value\\n- 6-month average customer retention\",\n    \"currentBlockers\": \"Need $1.5M seed funding to:\\n1. Expand engineering team from 3 to 8 developers\\n2. Build enterprise security features for Fortune 500 prospects\\n3. Scale cloud infrastructure for 500+ customers\"\n  },\n  \"summary\": \"Early-stage B2B SaaS company that helps e-commerce businesses optimize marketing ROI through AI-powered analytics. Currently has strong pilot metrics (50 customers, 23% ROAS improvement) and needs seed funding to scale engineering team and build enterprise features.\",\n  \"reviewAndRefine\": {\n    \"targetAudienceClarity\": \"Who is the ideal customer profile? Are you targeting SMB e-commerce or enterprise retail?\",\n    \"competitiveDifferentiation\": \"What makes your AI analytics superior to existing solutions like Google Analytics 4 or Segment?\",\n    \"implementationTimeline\": \"What are the key milestones for the next 12-18 months?\",\n    \"riskMitigation\": \"What are the main technical or market risks, and how will you address them?\"\n  },\n  \"userAnswers\": {\n    \"targetAudienceClarity\": \"We target mid-market e-commerce businesses with $5M-$50M annual revenue. These companies have complex marketing stacks but lack dedicated data science teams.\",\n    \"competitiveDifferentiation\": \"Unlike GA4 which just reports data, we provide prescriptive recommendations. Our AI identifies which marketing channels to increase/decrease spend on, predicting customer lifetime value within 48 hours of first purchase.\",\n    \"implementationTimeline\": \"Q2 2025: Enterprise security certification\\nQ3 2025: 200 paying customers\\nQ4 2025: Series A fundraising\\nQ1 2026: International expansion\",\n    \"riskMitigation\": \"Technical risk: Using proven ML models (not research). Market risk: Partnering with Shopify and WooCommerce to reduce customer acquisition costs. Team risk: Founders have 15+ years combined experience in MarTech.\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage2",
+							"protocol": "https",
+							"host": [
+								"YOUR-NGROK-URL",
+								"ngrok-free",
+								"dev"
+							],
+							"path": [
+								"webhook",
+								"sliderx-stage2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ai -> Follow up Questions",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-user-id",
+								"value": "test-vitor",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"test-vitor\",\n  \"summary\": {\n    \"slides\": [\n      {\n        \"index\": 1,\n        \"title\": \"Intro\",\n        \"bullets\": [\"Why this matters\", \"Market opportunity\", \"Company vision\"]\n      }\n    ]\n  },\n  \"reviewAndRefine\": [\n    {\n      \"id\": \"targetAudience\",\n      \"type\": \"select\",\n      \"label\": \"Who is this presentation primarily aimed at?\",\n      \"options\": [\n        \"Investors\",\n        \"Potential customers\",\n        \"Internal leadership\",\n        \"Strategic partners\"\n      ],\n      \"required\": true,\n      \"userAnswer\": \"\"\n    },\n    {\n      \"id\": \"coreMessage\",\n      \"type\": \"longText\",\n      \"label\": \"What is the key message or takeaway you want the audience to remember?\",\n      \"required\": true,\n      \"userAnswer\": \"\"\n    },\n    {\n      \"id\": \"businessGoal\",\n      \"type\": \"select\",\n      \"label\": \"What best describes your main business goal for this presentation?\",\n      \"options\": [\n        \"Fundraising / attracting investors\",\n        \"Product launch or marketing\",\n        \"Internal alignment and strategy\",\n        \"Client acquisition or sales enablement\"\n      ],\n      \"required\": true,\n      \"userAnswer\": \"\"\n    }\n  ]\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/1600852f-9694-478a-926b-49fa06b4ed36/ai/callback",
+							"protocol": "https",
+							"host": [
+								"f9yntj41f4",
+								"execute-api",
+								"eu-central-1",
+								"amazonaws",
+								"com"
+							],
+							"path": [
+								"dev",
+								"projects",
+								"1600852f-9694-478a-926b-49fa06b4ed36",
+								"ai",
+								"callback"
+							],
+							"query": [
+								{
+									"key": "Content-Type",
+									"value": "application/json",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

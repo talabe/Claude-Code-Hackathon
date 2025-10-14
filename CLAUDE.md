@@ -1,0 +1,190 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+SlideRx N8N is a workflow orchestration system that processes presentation PDFs using AI to generate condensed 3-slide executive summaries. The system uses N8N for workflow orchestration, FastAPI for PDF processing microservices, and integrates with AWS (S3, Lambda, API Gateway) and OpenRouter (Claude Sonnet 4).
+
+## Architecture
+
+### Two-Stage Processing Flow
+
+**Stage 1 - Initial Processing:**
+1. AWS Lambda triggers N8N webhook after S3 upload
+2. N8N downloads PDF from S3 and extracts text via PDF microservice
+3. AI analyzes presentation + business context → returns per-slide summary + clarifying questions
+4. N8N posts results back to AWS API Gateway (status: `needs_review`)
+5. Frontend displays summary and questions to user
+
+**Stage 2 - Final Generation:**
+1. User submits answers → API triggers N8N webhook with full context
+2. AI generates final 3-slide presentation (Problem/Solution/Ask)
+3. N8N generates PDF via microservice, uploads to S3
+4. N8N posts completion to API (status: `ready`)
+5. Frontend displays download link
+
+### Components
+
+- **N8N**: Workflow engine running in Docker, accessible locally and via ngrok
+- **PDF Services**: FastAPI microservice (`pdf_services.py`) for PDF extraction and generation
+- **Docker Compose**: Orchestrates both services on shared network
+- **ngrok**: Exposes N8N webhooks publicly for AWS Lambda integration
+
+### Service Communication
+
+- N8N → PDF Services: `http://pdf-services:8000` (Docker network)
+- N8N → AWS API: External HTTPS calls
+- N8N → OpenRouter AI: External HTTPS calls
+- AWS Lambda → N8N: Public ngrok URL webhooks
+
+## Common Commands
+
+### Start/Stop Services
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+
+# Restart N8N only
+docker-compose restart n8n
+
+# View logs
+docker-compose logs -f              # All services
+docker-compose logs -f n8n          # N8N only
+docker-compose logs -f pdf-services # PDF services only
+
+# Check service status
+docker-compose ps
+```
+
+### ngrok Setup
+
+```bash
+# Start ngrok tunnel for N8N (run in background)
+nohup ngrok http 5678 > ngrok.log 2>&1 &
+
+# Get public URL
+curl -s http://localhost:4040/api/tunnels | python3 -m json.tool | grep public_url
+
+# View ngrok dashboard
+# Open http://localhost:4040 in browser
+```
+
+### Testing PDF Services
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Test PDF extraction
+curl -X POST http://localhost:8000/extract-text -F "file=@test.pdf"
+
+# Test PDF generation
+curl -X POST http://localhost:8000/generate-pdf \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":"test-123","slide1":{"title":"THE PROBLEM","visual":"Description","sentence":"Short sentence"},"slide2":{"title":"THE SOLUTION","visual":"Description","sentence":"Short sentence"},"slide3":{"title":"THE ASK","visual":"Description","sentence":"Short sentence"}}' \
+  --output test-output.pdf
+```
+
+### N8N Maintenance
+
+```bash
+# Access N8N container shell
+docker exec -it sliderx-n8n bash
+
+# Backup N8N data
+tar -czf n8n-backup-$(date +%Y%m%d).tar.gz n8n-data/
+
+# Reset N8N database (clears all workflows and credentials)
+docker-compose stop n8n
+cp n8n-data/database.sqlite n8n-data/database.sqlite.backup
+rm n8n-data/database.sqlite
+docker-compose up -d n8n
+
+# Check N8N environment variables
+docker exec sliderx-n8n printenv | grep N8N_
+```
+
+## Workflow Configuration
+
+### Webhook URLs (for AWS Lambda integration)
+
+After starting ngrok, share these URLs with backend team:
+- Stage 1: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage1`
+- Stage 2: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage2`
+
+### Required N8N Credentials
+
+1. **AWS S3 Credentials** (named "AWS S3 SlideRx")
+   - Access Key ID, Secret Access Key, Region: eu-central-1
+
+2. **OpenRouter API** (named "OpenRouter API")
+   - Type: HTTP Header Auth
+   - Header: `Authorization`
+   - Value: `Bearer YOUR_API_KEY`
+
+### Importing Workflows
+
+Workflows are defined in:
+- `plan/n8n_workflow_stage1.json` - Initial processing workflow
+- `plan/n8n_workflow_stage2.json` - Final generation workflow
+
+After importing, update credential references in:
+- AWS S3 nodes (Download/Upload operations)
+- OpenRouter API calls (HTTP Request nodes with AI calls)
+
+## Important Configuration Notes
+
+### docker-compose.yml Environment Variables
+
+- `N8N_SECURE_COOKIE=false` - Required for local HTTP access
+- `N8N_PROTOCOL=http` - Local access protocol
+- `WEBHOOK_URL` - Must match ngrok public URL for external webhooks
+- `N8N_BASIC_AUTH_USER/PASSWORD` - Only active when no owner account exists
+
+### PDF Services Container
+
+The PDF services container shows "unhealthy" initially because `curl` takes time to install, but the service works correctly once `uvicorn` starts.
+
+### Network Configuration
+
+Both services run on the `sliderx-network` Docker network, allowing N8N to access PDF services via container name (`pdf-services:8000`) instead of localhost.
+
+## AWS Integration Contracts
+
+### Stage 1 Input (from Lambda)
+```json
+{
+  "projectId": "uuid",
+  "s3Bucket": "sliderx-uploads-dev",
+  "s3Key": "uploads/user-id/project-id/presentation.pdf",
+  "projectBrief": {
+    "businessPurpose": "...",
+    "projectPhase": "...",
+    "keyMetrics": "...",
+    "currentBlockers": "..."
+  }
+}
+```
+
+### Stage 1 Output (to API Gateway)
+POST to `/projects/{projectId}/review` with summary, reviewAndRefine questions, status: `needs_review`
+
+### Stage 2 Input (from API)
+Includes projectBrief + reviewAndRefine + summary + userAnswers
+
+### Stage 2 Output (to API Gateway)
+POST to `/projects/{projectId}/complete` with downloadUrl, slides, status: `ready`
+
+## File Structure
+
+- `docker-compose.yml` - Service orchestration
+- `pdf_services.py` - FastAPI PDF microservice
+- `ngrok_setup.sh` - ngrok installation/configuration script
+- `n8n-data/` - N8N persistent data (workflows, credentials, database)
+- `n8n-logs/` - N8N log files
+- `plan/` - Project documentation and workflow definitions

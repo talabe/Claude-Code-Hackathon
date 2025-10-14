@@ -1,0 +1,139 @@
+# ============================================
+# N8N Runtime Data (NEVER COMMIT)
+# ============================================
+n8n-data/database.sqlite
+n8n-data/database.sqlite-*
+n8n-data/*.backup-*
+n8n-data/*.log
+n8n-data/crash.journal
+n8n-data/binaryData/
+n8n-data/git/
+n8n-data/ssh/
+n8n-data/custom/
+
+# N8N workflow exports (runtime copies - use workflows/ instead)
+n8n-data/*.json
+
+# Exception: Allow specific config files in n8n-data
+!n8n-data/config
+!n8n-data/nodes/package.json
+
+# ============================================
+# Logs & Temporary Files
+# ============================================
+*.log
+n8n-logs/
+ngrok.log
+nohup.out
+
+# N8N Backups
+n8n-data-backup-*.tar.gz
+*.tar.gz
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# ============================================
+# Environment & Secrets (NEVER COMMIT)
+# ============================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets/
+
+# ============================================
+# IDE & Editor Files
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Claude Code local settings (personal configuration)
+.claude/settings.local.json
+
+# ============================================
+# OS Files
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================================
+# CI/CD & Git
+# ============================================
+.github/
+
+# ============================================
+# Legacy & Development Artifacts
+# ============================================
+docs/legacy/
+
+# Temporary test scripts in root
+test_*.sh
+test_*.json
+debug_*.sh
+quick_*.sh
+*_test.sh
+
+# ============================================
+# Docker & Build Artifacts
+# ============================================
+*.dockerfile.bak
+docker-compose.override.yml
+
+# ============================================
+# PDF & Binary Files (unless in specific dirs)
+# ============================================
+*.pdf
+!plan/Presentation\ Example.pdf
+
+# ============================================
+# Node Modules (if any JS tooling added later)
+# ============================================
+node_modules/
+package-lock.json
+yarn.lock
+
+# ============================================
+# Testing & Coverage
+# ============================================
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+
+# ============================================
+# Misc
+# ============================================
+*.bak
+*.tmp
+*.temp
+.cache/

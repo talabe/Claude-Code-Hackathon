@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SlideRx Logo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .logo-container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Primary Logo */
+        .logo-primary {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            position: relative;
+        }
+
+        .logo-text {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .slide-part {
+            color: #2563eb;
+        }
+
+        .rx-part {
+            color: #10b981;
+            font-style: italic;
+        }
+
+        /* Icon Styles */
+        .slides-stack {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .slide-layer {
+            position: absolute;
+            width: 36px;
+            height: 28px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .slide-1 {
+            background: #2563eb;
+            top: 0;
+            left: 0;
+            z-index: 3;
+            opacity: 0.95;
+        }
+
+        .slide-2 {
+            background: #3b82f6;
+            top: 6px;
+            left: 6px;
+            z-index: 2;
+            opacity: 0.7;
+        }
+
+        .slide-3 {
+            background: #60a5fa;
+            top: 12px;
+            left: 12px;
+            z-index: 1;
+            opacity: 0.5;
+        }
+
+        .rx-symbol {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+            z-index: 4;
+            border: 2px solid white;
+        }
+
+        /* Hover Effect */
+        .logo-icon:hover .slide-1 {
+            transform: translateY(-2px) translateX(-2px);
+        }
+
+        .logo-icon:hover .slide-2 {
+            transform: translateY(-1px) translateX(-1px);
+        }
+
+        /* Alternative Versions */
+        .logo-variations {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .variation {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .variation-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        /* Dark Background Version */
+        .dark-bg {
+            background: #1e293b;
+        }
+
+        .dark-bg .logo-text {
+            color: white;
+        }
+
+        /* Monochrome Version */
+        .monochrome .slide-part,
+        .monochrome .rx-part {
+            color: #1e293b;
+        }
+
+        .monochrome .slide-layer {
+            background: #1e293b !important;
+        }
+
+        .monochrome .rx-symbol {
+            background: #1e293b;
+        }
+
+        /* Icon Only */
+        .icon-only .logo-icon {
+            width: 64px;
+            height: 64px;
+        }
+
+        .icon-only .slide-layer {
+            width: 48px;
+            height: 38px;
+        }
+
+        .icon-only .slide-2 {
+            top: 8px;
+            left: 8px;
+        }
+
+        .icon-only .slide-3 {
+            top: 16px;
+            left: 16px;
+        }
+
+        .icon-only .rx-symbol {
+            width: 26px;
+            height: 26px;
+            font-size: 13px;
+        }
+
+        /* Small Version */
+        .logo-small .logo-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .logo-small .slide-layer {
+            width: 24px;
+            height: 18px;
+            border-radius: 3px;
+        }
+
+        .logo-small .slide-2 {
+            top: 4px;
+            left: 4px;
+        }
+
+        .logo-small .slide-3 {
+            top: 8px;
+            left: 8px;
+        }
+
+        .logo-small .rx-symbol {
+            width: 14px;
+            height: 14px;
+            font-size: 7px;
+            bottom: -2px;
+            right: -2px;
+        }
+
+        .logo-small .logo-text {
+            font-size: 20px;
+        }
+
+        /* Tagline */
+        .tagline {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: -10px;
+        }
+
+        /* Download Buttons */
+        .download-section {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .download-btn {
+            padding: 8px 16px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .download-btn.secondary {
+            background: #10b981;
+        }
+
+        .download-btn.secondary:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <div class="logo-group">
+            <div class="logo-title">Primary Logo</div>
+            <div class="logo-primary">
+                <div class="logo-icon">
+                    <div class="slides-stack">
+                        <div class="slide-layer slide-3"></div>
+                        <div class="slide-layer slide-2"></div>
+                        <div class="slide-layer slide-1"></div>
+                        <div class="rx-symbol">Rx</div>
+                    </div>
+                </div>
+                <div class="logo-text">
+                    <span class="slide-part">Slide</span><span class="rx-part">Rx</span>
+                </div>
+            </div>
+            <div class="tagline">Your CEO doesn't have 40 minutes. We give them 3.</div>
+        </div>
+        
+        <div class="download-section">
+            <button class="download-btn" onclick="downloadSVG()">Download SVG</button>
+            <button class="download-btn secondary" onclick="downloadPNG()">Download PNG</button>
+        </div>
+    </div>
+
+    <div class="logo-variations">
+        <div class="variation">
+            <div class="variation-title">Dark Background</div>
+            <div class="logo-primary dark-bg" style="padding: 20px; border-radius: 8px;">
+                <div class="logo-icon">
+                    <div class="slides-stack">
+                        <div class="slide-layer slide-3"></div>
+                        <div class="slide-layer slide-2"></div>
+                        <div class="slide-layer slide-1"></div>
+                        <div class="rx-symbol">Rx</div>
+                    </div>
+                </div>
+                <div class="logo-text">
+                    <span class="slide-part">Slide</span><span class="rx-part">Rx</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="variation">
+            <div class="variation-title">Monochrome</div>
+            <div class="logo-primary monochrome">
+                <div class="logo-icon">
+                    <div class="slides-stack">
+                        <div class="slide-layer slide-3"></div>
+                        <div class="slide-layer slide-2"></div>
+                        <div class="slide-layer slide-1"></div>
+                        <div class="rx-symbol">Rx</div>
+                    </div>
+                </div>
+                <div class="logo-text">
+                    <span class="slide-part">Slide</span><span class="rx-part">Rx</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="variation icon-only">
+            <div class="variation-title">Icon Only</div>
+            <div class="logo-icon">
+                <div class="slides-stack">
+                    <div class="slide-layer slide-3"></div>
+                    <div class="slide-layer slide-2"></div>
+                    <div class="slide-layer slide-1"></div>
+                    <div class="rx-symbol">Rx</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="variation logo-small">
+            <div class="variation-title">Small Size</div>
+            <div class="logo-primary">
+                <div class="logo-icon">
+                    <div class="slides-stack">
+                        <div class="slide-layer slide-3"></div>
+                        <div class="slide-layer slide-2"></div>
+                        <div class="slide-layer slide-1"></div>
+                        <div class="rx-symbol">Rx</div>
+                    </div>
+                </div>
+                <div class="logo-text">
+                    <span class="slide-part">Slide</span><span class="rx-part">Rx</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadSVG() {
+            const svg = `<svg width="200" height="60" xmlns="http://www.w3.org/2000/svg">
+                <!-- Slide layers -->
+                <rect x="12" y="12" width="36" height="28" rx="4" fill="#60a5fa" opacity="0.5"/>
+                <rect x="6" y="6" width="36" height="28" rx="4" fill="#3b82f6" opacity="0.7"/>
+                <rect x="0" y="0" width="36" height="28" rx="4" fill="#2563eb" opacity="0.95"/>
+                
+                <!-- Rx circle -->
+                <circle cx="40" cy="32" r="10" fill="#10b981" stroke="white" stroke-width="2"/>
+                <text x="40" y="37" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">Rx</text>
+                
+                <!-- Text -->
+                <text x="60" y="32" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#2563eb">Slide</text>
+                <text x="130" y="32" font-family="Arial, sans-serif" font-size="28" font-weight="bold" font-style="italic" fill="#10b981">Rx</text>
+            </svg>`;
+            
+            const blob = new Blob([svg], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sliderx-logo.svg';
+            a.click();
+        }
+
+        function downloadPNG() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw slide layers
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = '#60a5fa';
+            ctx.fillRect(48, 48, 144, 112);
+            
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(24, 24, 144, 112);
+            
+            ctx.globalAlpha = 0.95;
+            ctx.fillStyle = '#2563eb';
+            ctx.fillRect(0, 0, 144, 112);
+            
+            // Draw Rx circle
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath();
+            ctx.arc(160, 128, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Rx text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Rx', 160, 140);
+            
+            // Draw logo text
+            ctx.fillStyle = '#2563eb';
+            ctx.font = 'bold 96px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Slide', 240, 140);
+            
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'italic bold 96px Arial';
+            ctx.fillText('Rx', 480, 140);
+            
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'sliderx-logo.png';
+                a.click();
+            });
+        }
+    </script>
+</body>
+</html>

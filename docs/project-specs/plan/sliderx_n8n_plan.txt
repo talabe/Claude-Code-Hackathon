@@ -1,0 +1,1768 @@
+# SlideRx N8N Implementation Plan
+
+**Owner:** Talab  
+**Last Updated:** 2025-10-08  
+**Status:** Ready for Implementation
+
+---
+
+## Table of Contents
+
+1. [Architecture Overview](#architecture-overview)
+2. [System Requirements](#system-requirements)
+3. [Infrastructure Setup](#infrastructure-setup)
+4. [Workflow 1: Stage 1 - Initial Processing](#workflow-1-stage-1---initial-processing)
+5. [Workflow 2: Stage 2 - Final Generation](#workflow-2-stage-2---final-generation)
+6. [PDF Microservices](#pdf-microservices)
+7. [Integration Contracts](#integration-contracts)
+8. [Testing & Validation](#testing--validation)
+9. [Deployment Checklist](#deployment-checklist)
+10. [Troubleshooting](#troubleshooting)
+
+---
+
+## Architecture Overview
+
+### System Flow
+
+```
+User uploads PDF via Frontend (Phil)
+    ↓
+AWS API Gateway + Lambda (Vitor) → S3 upload
+    ↓
+Lambda triggers N8N Stage 1 Webhook (Talab)
+    ↓
+N8N downloads PDF, extracts text, calls AI
+    ↓
+AI returns: summary + questions
+    ↓
+N8N posts back to API → DynamoDB (status: needs_review)
+    ↓
+Frontend polls, shows questions to user
+    ↓
+User answers questions
+    ↓
+Frontend submits answers → API
+    ↓
+API triggers N8N Stage 2 Webhook (Talab)
+    ↓
+N8N calls AI with full context → generates 3 slides
+    ↓
+N8N generates PDF, uploads to S3
+    ↓
+N8N posts back to API → DynamoDB (status: ready)
+    ↓
+Frontend shows download link
+```
+
+### Key Technologies
+
+- **N8N**: Workflow orchestration
+- **AWS S3**: File storage (uploads & generated files)
+- **AWS DynamoDB**: Project state management (via API Gateway)
+- **OpenRouter**: AI API (Claude Sonnet 4)
+- **PDF Microservices**: Python FastAPI for PDF processing
+- **Docker**: Containerization
+
+### Status Progression
+
+```
+uploading → processing → needs_review → processing → ready
+```
+
+---
+
+## System Requirements
+
+### Hardware
+
+- **CPU**: 2 cores minimum (4 cores recommended)
+- **RAM**: 4GB minimum (8GB recommended)
+- **Storage**: 20GB minimum
+- **Network**: Stable internet connection
+
+### Software
+
+- **OS**: Ubuntu 20.04+ (or any Linux with Docker support)
+- **Docker**: 20.10+
+- **Docker Compose**: 1.29+
+- **Python**: 3.11+ (for PDF services)
+- **Node.js**: Not required (N8N runs in Docker)
+
+### External Services
+
+- **AWS Account**: S3 bucket access
+  - Bucket 1: `sliderx-uploads-dev`
+  - Bucket 2: `sliderx-generated-dev`
+  - Region: `eu-central-1`
+- **OpenRouter Account**: API key for Claude Sonnet 4
+- **Network Access**: Ability to receive webhooks from AWS Lambda
+
+---
+
+## Infrastructure Setup
+
+### 1. Docker Compose Configuration
+
+**File:** `docker-compose.yml`
+
+```yaml
+version: '3.8'
+
+services:
+  # N8N Workflow Engine
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: sliderx-n8n
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      
+      # IMPORTANT: Update with your ngrok URL or public IP
+      - WEBHOOK_URL=http://YOUR_SERVER_IP:5678/
+      
+      # Cookie Configuration
+      - N8N_SECURE_COOKIE=false
+      
+      # Authentication
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=sliderx123
+      
+      # Database
+      - DB_TYPE=sqlite
+      - DB_SQLITE_VACUUM_ON_STARTUP=true
+      
+      # Execution Settings
+      - EXECUTIONS_PROCESS=main
+      - EXECUTIONS_TIMEOUT=300
+      - EXECUTIONS_TIMEOUT_MAX=600
+      
+      # Performance
+      - NODE_OPTIONS=--max-old-space-size=4096
+      
+      # Timezone
+      - GENERIC_TIMEZONE=America/New_York
+      
+      # Storage
+      - N8N_BINARY_DATA_MODE=filesystem
+      
+      # Logging
+      - N8N_LOG_LEVEL=info
+      
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+      - ./n8n-logs:/home/node/.n8n/logs
+    networks:
+      - sliderx-network
+    depends_on:
+      - pdf-services
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # PDF Processing Services
+  pdf-services:
+    image: python:3.11-slim
+    container_name: sliderx-pdf-services
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8000:8000"
+    working_dir: /app
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y curl &&
+        pip install --no-cache-dir fastapi uvicorn PyPDF2 reportlab python-multipart &&
+        uvicorn pdf_services:app --host 0.0.0.0 --port 8000
+      "
+    volumes:
+      - ./pdf_services.py:/app/pdf_services.py
+    networks:
+      - sliderx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+networks:
+  sliderx-network:
+    driver: bridge
+```
+
+### 2. PDF Microservices
+
+**File:** `pdf_services.py`
+
+```python
+"""
+PDF Processing Microservices for SlideRx
+Handles PDF text extraction and 3-slide PDF generation
+"""
+
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import List
+import PyPDF2
+import io
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+
+app = FastAPI(title="SlideRx PDF Services")
+
+# ============================================
+# PDF EXTRACTION SERVICE
+# ============================================
+
+@app.post("/extract-text")
+async def extract_text(file: UploadFile = File(...)):
+    """
+    Extract text from PDF file
+    Returns: JSON with text content and metadata
+    """
+    try:
+        contents = await file.read()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
+        
+        slides = []
+        for page_num, page in enumerate(pdf_reader.pages, 1):
+            text = page.extract_text()
+            slides.append({
+                "number": page_num,
+                "text": text.strip()
+            })
+        
+        return {
+            "success": True,
+            "pageCount": len(pdf_reader.pages),
+            "slides": slides,
+            "fullText": "\n\n".join([s["text"] for s in slides])
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"PDF extraction failed: {str(e)}")
+
+
+# ============================================
+# PDF GENERATION SERVICE
+# ============================================
+
+class Slide(BaseModel):
+    title: str
+    visual: str
+    sentence: str
+
+class SlideRequest(BaseModel):
+    slide1: Slide
+    slide2: Slide
+    slide3: Slide
+    projectId: str
+
+@app.post("/generate-pdf")
+async def generate_pdf(request: SlideRequest):
+    """
+    Generate 3-slide PDF from structured data
+    Returns: PDF file
+    """
+    try:
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=landscape(letter))
+        width, height = landscape(letter)
+        
+        slides_data = [request.slide1, request.slide2, request.slide3]
+        
+        for slide_num, slide in enumerate(slides_data, 1):
+            if slide_num > 1:
+                c.showPage()
+            
+            # Title
+            c.setFont("Helvetica-Bold", 28)
+            c.drawString(50, height - 80, slide.title)
+            
+            # Visual description label
+            c.setFont("Helvetica", 12)
+            c.setFillColorRGB(0.4, 0.4, 0.4)
+            c.drawString(50, height - 180, "VISUAL:")
+            
+            # Visual description box
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.rect(50, height - 400, width - 100, 200, stroke=1, fill=0)
+            
+            # Visual description text (wrapped)
+            c.setFillColorRGB(0, 0, 0)
+            c.setFont("Helvetica", 14)
+            text_object = c.beginText(70, height - 220)
+            
+            # Simple text wrapping
+            visual_lines = []
+            words = slide.visual.split()
+            current_line = []
+            for word in words:
+                current_line.append(word)
+                if len(" ".join(current_line)) > 80:
+                    visual_lines.append(" ".join(current_line[:-1]))
+                    current_line = [word]
+            if current_line:
+                visual_lines.append(" ".join(current_line))
+            
+            for line in visual_lines[:8]:
+                text_object.textLine(line)
+            
+            c.drawText(text_object)
+            
+            # Main sentence (centered)
+            c.setFont("Helvetica-Bold", 20)
+            c.setFillColorRGB(0.15, 0.39, 0.92)
+            
+            sentence_width = c.stringWidth(slide.sentence, "Helvetica-Bold", 20)
+            x_centered = (width - sentence_width) / 2
+            c.drawString(x_centered, height - 450, slide.sentence)
+            
+            # Slide number
+            c.setFont("Helvetica", 10)
+            c.setFillColorRGB(0.6, 0.6, 0.6)
+            c.drawRightString(width - 50, 50, f"Slide {slide_num} of 3")
+        
+        c.save()
+        buffer.seek(0)
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="SlideRx_{request.projectId}_Condensed.pdf"'
+            }
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
+# ============================================
+# HEALTH CHECK
+# ============================================
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "service": "SlideRx PDF Services",
+        "endpoints": {
+            "extract": "/extract-text",
+            "generate": "/generate-pdf"
+        }
+    }
+```
+
+### 3. Startup Script
+
+**File:** `setup.sh`
+
+```bash
+#!/bin/bash
+# Setup script for SlideRx N8N
+
+set -e
+
+echo "=========================================="
+echo "SlideRx N8N Setup"
+echo "=========================================="
+echo ""
+
+# Create project directory
+PROJECT_DIR="$HOME/sliderx-n8n"
+mkdir -p "$PROJECT_DIR"
+cd "$PROJECT_DIR"
+
+# Create subdirectories
+mkdir -p n8n-data n8n-logs
+
+# Get server IP
+SERVER_IP=$(hostname -I | awk '{print $1}')
+echo "Server IP: $SERVER_IP"
+echo ""
+
+# Create docker-compose.yml
+echo "Creating docker-compose.yml..."
+# (Copy docker-compose.yml content here)
+
+# Create pdf_services.py
+echo "Creating pdf_services.py..."
+# (Copy pdf_services.py content here)
+
+# Start services
+echo "Starting services..."
+docker-compose up -d
+
+echo ""
+echo "Waiting for services to start..."
+sleep 20
+
+# Check status
+docker-compose ps
+
+echo ""
+echo "=========================================="
+echo "Setup Complete!"
+echo "=========================================="
+echo ""
+echo "Access N8N at: http://$SERVER_IP:5678"
+echo "  Username: admin"
+echo "  Password: sliderx123"
+echo ""
+echo "PDF Services: http://$SERVER_IP:8000"
+echo ""
+echo "Next steps:"
+echo "  1. Configure AWS S3 credentials in N8N"
+echo "  2. Configure OpenRouter API key in N8N"
+echo "  3. Import workflows"
+echo "  4. Share webhook URLs with Vitor"
+echo ""
+```
+
+### 4. Firewall Configuration
+
+```bash
+# Allow N8N and PDF services ports
+sudo ufw allow 5678/tcp comment 'N8N'
+sudo ufw allow 8000/tcp comment 'PDF Services'
+sudo ufw reload
+```
+
+---
+
+## Workflow 1: Stage 1 - Initial Processing
+
+### Purpose
+
+- Triggered by AWS Lambda after PDF upload to S3
+- Extracts text from PDF
+- Calls AI to generate summary + review questions
+- Updates project status to `needs_review`
+
+### Input (from AWS Lambda)
+
+```json
+{
+  "projectId": "uuid",
+  "s3Bucket": "sliderx-uploads-dev",
+  "s3Key": "uploads/user-id/project-id/presentation.pdf",
+  "projectBrief": {
+    "businessPurpose": "Status Update",
+    "projectPhase": "Kickoff phase concluded",
+    "keyMetrics": "34 user stories created",
+    "currentBlockers": "None"
+  }
+}
+```
+
+### Output (to AWS API Gateway)
+
+```json
+{
+  "summary": [
+    {
+      "slideNumber": 1,
+      "title": "Slide Title",
+      "keyPoints": "2-3 sentence summary"
+    }
+  ],
+  "reviewAndRefine": {
+    "questions": [
+      {
+        "question": "What is your target audience's technical level?",
+        "type": "text"
+      }
+    ]
+  },
+  "status": "needs_review"
+}
+```
+
+### Workflow JSON
+
+**File:** `workflow-stage1.json`
+
+```json
+{
+  "name": "SlideRx - Stage 1: Initial Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage1",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-stage1",
+      "name": "Webhook: Receive Job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = items[0].json.body || items[0].json;\n\nreturn [{\n  json: {\n    projectId: body.projectId,\n    s3Bucket: body.s3Bucket || 'sliderx-uploads-dev',\n    s3Key: body.s3Key,\n    projectBrief: body.projectBrief || {}\n  }\n}];"
+      },
+      "id": "parse-input",
+      "name": "Parse Lambda Input",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "bucketName": "={{$json.s3Bucket}}",
+        "fileKey": "={{$json.s3Key}}"
+      },
+      "id": "download-s3",
+      "name": "Download PDF from S3",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "aws": {
+          "id": "PLACEHOLDER",
+          "name": "AWS Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "http://pdf-services:8000/extract-text",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        }
+      },
+      "id": "extract-text",
+      "name": "Extract Text from PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const extractedData = items[0].json;\nconst projectData = $('Parse Lambda Input').first().json;\n\nconst systemPrompt = `You are a presentation strategist trained in Nancy Duarte and Dan Roam principles.\n\nYour task is to:\n1. Generate a per-slide summary of the presentation\n2. Identify 2-4 clarifying questions to ask the user before creating the final 3-slide summary\n\nOutput JSON format:\n{\n  \"summary\": [\n    {\"slideNumber\": 1, \"title\": \"slide title\", \"keyPoints\": \"2-3 sentence summary\"},\n    {\"slideNumber\": 2, \"title\": \"slide title\", \"keyPoints\": \"2-3 sentence summary\"}\n  ],\n  \"reviewAndRefine\": {\n    \"questions\": [\n      {\"question\": \"What is your target audience's technical level?\", \"type\": \"text\"},\n      {\"question\": \"What is the desired outcome of this presentation?\", \"type\": \"text\"}\n    ]\n  }\n}`;\n\nconst projectBrief = projectData.projectBrief;\nconst userPrompt = `PRESENTATION CONTENT:\n${extractedData.fullText}\n\nBUSINESS CONTEXT:\nPurpose: ${projectBrief.businessPurpose || 'Not specified'}\nProject Phase: ${projectBrief.projectPhase || 'Not specified'}\nKey Metrics: ${projectBrief.keyMetrics || 'Not specified'}\nCurrent Blockers: ${projectBrief.currentBlockers || 'Not specified'}\n\nPages: ${extractedData.pageCount}\n\nPlease:\n1. Create a per-slide summary (title + 2-3 sentence summary of key points)\n2. Ask 2-4 clarifying questions that would help create a better 3-slide executive summary`;\n\nreturn [{\n  json: {\n    projectId: projectData.projectId,\n    systemPrompt: systemPrompt,\n    userPrompt: userPrompt\n  }\n}];"
+      },
+      "id": "prepare-stage1-prompt",
+      "name": "Prepare Stage 1 Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4"
+            },
+            {
+              "name": "messages",
+              "value": "={{[\n  {role: 'system', content: $json.systemPrompt},\n  {role: 'user', content: $json.userPrompt}\n]}}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "3000"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "call-ai-stage1",
+      "name": "Call AI for Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "OpenRouter API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const item = items[0].json;\nconst projectId = $('Prepare Stage 1 Prompt').first().json.projectId;\n\ntry {\n  let content = item.choices[0].message.content;\n  content = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const parsed = JSON.parse(content);\n  \n  if (!parsed.summary || !parsed.reviewAndRefine) {\n    throw new Error('Missing required fields in AI response');\n  }\n  \n  return [{\n    json: {\n      projectId: projectId,\n      summary: parsed.summary,\n      reviewAndRefine: parsed.reviewAndRefine\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  throw new Error(`Failed to parse AI response: ${error.message}`);\n}"
+      },
+      "id": "parse-stage1-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/{{$json.projectId}}/review",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "={{JSON.stringify($json.summary)}}"
+            },
+            {
+              "name": "reviewAndRefine",
+              "value": "={{JSON.stringify($json.reviewAndRefine)}}"
+            },
+            {
+              "name": "status",
+              "value": "needs_review"
+            }
+          ]
+        }
+      },
+      "id": "update-api",
+      "name": "POST to API (needs_review)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{{\n  projectId: $('Parse AI Response').first().json.projectId,\n  status: 'needs_review',\n  message: 'Initial processing complete. Awaiting user answers.'\n}}}"
+      },
+      "id": "respond-stage1",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: Receive Job": {
+      "main": [[{"node": "Parse Lambda Input"}]]
+    },
+    "Parse Lambda Input": {
+      "main": [[{"node": "Download PDF from S3"}]]
+    },
+    "Download PDF from S3": {
+      "main": [[{"node": "Extract Text from PDF"}]]
+    },
+    "Extract Text from PDF": {
+      "main": [[{"node": "Prepare Stage 1 Prompt"}]]
+    },
+    "Prepare Stage 1 Prompt": {
+      "main": [[{"node": "Call AI for Review"}]]
+    },
+    "Call AI for Review": {
+      "main": [[{"node": "Parse AI Response"}]]
+    },
+    "Parse AI Response": {
+      "main": [[{"node": "POST to API (needs_review)"}]]
+    },
+    "POST to API (needs_review)": {
+      "main": [[{"node": "Respond Success"}]]
+    }
+  }
+}
+```
+
+### Testing Stage 1
+
+```bash
+curl -X POST http://YOUR_IP:5678/webhook/sliderx-stage1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-123",
+    "s3Bucket": "sliderx-uploads-dev",
+    "s3Key": "uploads/test-user/test-123/presentation.pdf",
+    "projectBrief": {
+      "businessPurpose": "Status Update",
+      "projectPhase": "Kickoff phase",
+      "keyMetrics": "34 user stories",
+      "currentBlockers": "None"
+    }
+  }'
+```
+
+---
+
+## Workflow 2: Stage 2 - Final Generation
+
+### Purpose
+
+- Triggered by API after user submits answers
+- Calls AI with full context (original summary + user answers)
+- Generates final 3 slides
+- Creates PDF and uploads to S3
+- Updates project status to `ready`
+
+### Input (from API)
+
+```json
+{
+  "projectId": "uuid",
+  "projectBrief": {
+    "businessPurpose": "Status Update",
+    "projectPhase": "Kickoff phase",
+    "keyMetrics": "34 user stories",
+    "currentBlockers": "None"
+  },
+  "reviewAndRefine": {
+    "questions": [...]
+  },
+  "summary": [...],
+  "userAnswers": ["Answer 1", "Answer 2"]
+}
+```
+
+### Output (to AWS API Gateway)
+
+```json
+{
+  "downloadUrl": "https://sliderx-generated-dev.s3.eu-central-1.amazonaws.com/...",
+  "slides": {
+    "slide1": {...},
+    "slide2": {...},
+    "slide3": {...},
+    "report": {...}
+  },
+  "status": "ready"
+}
+```
+
+### Workflow JSON
+
+**File:** `workflow-stage2.json`
+
+```json
+{
+  "name": "SlideRx - Stage 2: Final Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage2",
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-stage2",
+      "name": "Webhook: User Answered",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = items[0].json.body || items[0].json;\n\nreturn [{\n  json: {\n    projectId: body.projectId,\n    projectBrief: body.projectBrief,\n    reviewAndRefine: body.reviewAndRefine,\n    summary: body.summary,\n    userAnswers: body.userAnswers || body.answers\n  }\n}];"
+      },
+      "id": "parse-stage2-input",
+      "name": "Parse User Answers",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = items[0].json;\n\nconst systemPrompt = `You are a presentation strategist trained in Nancy Duarte and Dan Roam principles.\n\nYour task is to create a final 3-slide executive presentation.\n\nPRINCIPLES:\n1. Decision-first structure (executives start with conclusion)\n2. Visual over verbal (images process 60,000x faster than text)\n3. One idea per slide\n4. No jargon\n5. Specific visual descriptions\n\nOUTPUT FORMAT (JSON):\n{\n  \"slide1\": {\n    \"title\": \"THE PROBLEM\",\n    \"visual\": \"[Specific visual description]\",\n    \"sentence\": \"[Max 15 words]\"\n  },\n  \"slide2\": {\n    \"title\": \"THE SOLUTION\",\n    \"visual\": \"[Specific visual description]\",\n    \"sentence\": \"[Max 15 words]\"\n  },\n  \"slide3\": {\n    \"title\": \"THE ASK\",\n    \"visual\": \"[Specific visual description]\",\n    \"sentence\": \"[Max 15 words]\"\n  },\n  \"report\": {\n    \"explanations\": [\n      {\n        \"slides\": \"1-4\",\n        \"title\": \"Section name\",\n        \"cut\": \"What was removed\",\n        \"why\": \"Reason for removal\",\n        \"principle\": \"Which presentation principle\",\n        \"location\": \"Deleted/Appendix\"\n      }\n    ]\n  }\n}`;\n\nconst brief = data.projectBrief;\nconst qaContext = data.reviewAndRefine.questions.map((q, i) => {\n  return `Q: ${q.question}\\nA: ${data.userAnswers[i] || 'Not answered'}`;\n}).join('\\n\\n');\n\nconst summaryText = data.summary.map(s => \n  `Slide ${s.slideNumber}: ${s.title}\\n${s.keyPoints}`\n).join('\\n\\n');\n\nconst userPrompt = `ORIGINAL PRESENTATION SUMMARY:\n${summaryText}\n\nBUSINESS CONTEXT:\nPurpose: ${brief.businessPurpose}\nProject Phase: ${brief.projectPhase}\nKey Metrics: ${brief.keyMetrics}\nCurrent Blockers: ${brief.currentBlockers}\n\nCLARIFYING Q&A:\n${qaContext}\n\nBased on all this context, create the final 3-slide executive presentation following the JSON format.\nProvide 5-10 specific explanations in the report about what was cut and why.`;\n\nreturn [{\n  json: {\n    projectId: data.projectId,\n    systemPrompt: systemPrompt,\n    userPrompt: userPrompt\n  }\n}];"
+      },
+      "id": "prepare-stage2-prompt",
+      "name": "Prepare Final Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "anthropic/claude-sonnet-4"
+            },
+            {
+              "name": "messages",
+              "value": "={{[\n  {role: 'system', content: $json.systemPrompt},\n  {role: 'user', content: $json.userPrompt}\n]}}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "2500"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "call-ai-stage2",
+      "name": "Call AI for Final Slides",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "OpenRouter API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const item = items[0].json;\nconst projectId = $('Prepare Final Prompt').first().json.projectId;\n\ntry {\n  let content = item.choices[0].message.content;\n  content = content.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  const parsed = JSON.parse(content);\n  \n  if (!parsed.slide1 || !parsed.slide2 || !parsed.slide3) {\n    throw new Error('Missing required slides');\n  }\n  \n  return [{\n    json: {\n      projectId: projectId,\n      slides: parsed\n    }\n  }];\n  \n} catch (error) {\n  console.error('Parse error:', error);\n  throw new Error(`Failed to parse AI response: ${error.message}`);\n}"
+      },
+      "id": "parse-stage2-response",
+      "name": "Parse Final Slides",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://pdf-services:8000/generate-pdf",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "projectId",
+              "value": "={{$json.projectId}}"
+            },
+            {
+              "name": "slide1",
+              "value": "={{$json.slides.slide1}}"
+            },
+            {
+              "name": "slide2",
+              "value": "={{$json.slides.slide2}}"
+            },
+            {
+              "name": "slide3",
+              "value": "={{$json.slides.slide3}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "generate-final-pdf",
+      "name": "Generate Final PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "sliderx-generated-dev",
+        "fileName": "={{$('Parse Final Slides').first().json.projectId + '/presentation-condensed.pdf'}}",
+        "binaryData": true,
+        "options": {
+          "acl": "private"
+        }
+      },
+      "id": "upload-to-s3",
+      "name": "Upload to S3",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "credentials": {
+        "aws": {
+          "id": "PLACEHOLDER",
+          "name": "AWS Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const projectId = $('Parse Final Slides').first().json.projectId;\nconst downloadUrl = `https://sliderx-generated-dev.s3.eu-central-1.amazonaws.com/${projectId}/presentation-condensed.pdf`;\n\nreturn [{\n  json: {\n    projectId: projectId,\n    downloadUrl: downloadUrl,\n    slides: $('Parse Final Slides').first().json.slides\n  }\n}];"
+      },
+      "id": "prepare-final-update",
+      "name": "Prepare Final Update",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/{{$json.projectId}}/complete",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "downloadUrl",
+              "value": "={{$json.downloadUrl}}"
+            },
+            {
+              "name": "slides",
+              "value": "={{JSON.stringify($json.slides)}}"
+            },
+            {
+              "name": "status",
+              "value": "ready"
+            }
+          ]
+        }
+      },
+      "id": "update-api-ready",
+      "name": "POST to API (ready)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{{\n  projectId: $('Prepare Final Update').first().json.projectId,\n  status: 'ready',\n  downloadUrl: $('Prepare Final Update').first().json.downloadUrl,\n  message: 'Final presentation generated successfully'\n}}}"
+      },
+      "id": "respond-stage2",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2220, 300]
+    }
+  ],
+  "connections": {
+    "Webhook: User Answered": {
+      "main": [[{"node": "Parse User Answers"}]]
+    },
+    "Parse User Answers": {
+      "main": [[{"node": "Prepare Final Prompt"}]]
+    },
+    "Prepare Final Prompt": {
+      "main": [[{"node": "Call AI for Final Slides"}]]
+    },
+    "Call AI for Final Slides": {
+      "main": [[{"node": "Parse Final Slides"}]]
+    },
+    "Parse Final Slides": {
+      "main": [[{"node": "Generate Final PDF"}]]
+    },
+    "Generate Final PDF": {
+      "main": [[{"node": "Upload to S3"}]]
+    },
+    "Upload to S3": {
+      "main": [[{"node": "Prepare Final Update"}]]
+    },
+    "Prepare Final Update": {
+      "main": [[{"node": "POST to API (ready)"}]]
+    },
+    "POST to API (ready)": {
+      "main": [[{"node": "Respond Success"}]]
+    }
+  }
+}
+```
+
+### Testing Stage 2
+
+```bash
+curl -X POST http://YOUR_IP:5678/webhook/sliderx-stage2 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-123",
+    "projectBrief": {
+      "businessPurpose": "Status Update",
+      "projectPhase": "Kickoff",
+      "keyMetrics": "34 stories",
+      "currentBlockers": "None"
+    },
+    "reviewAndRefine": {
+      "questions": [
+        {"question": "Target audience?", "type": "text"}
+      ]
+    },
+    "summary": [
+      {"slideNumber": 1, "title": "Test", "keyPoints": "Summary"}
+    ],
+    "userAnswers": ["Executive team"]
+  }'
+```
+
+---
+
+## Integration Contracts
+
+### For Vitor (AWS/Backend)
+
+#### Lambda Function: Trigger Stage 1
+
+**When:** After successful S3 upload
+
+```javascript
+// Lambda function triggered by S3 ObjectCreated event
+exports.handler = async (event) => {
+  const s3Record = event.Records[0].s3;
+  const bucket = s3Record.bucket.name;
+  const key = decodeURIComponent(s3Record.object.key.replace(/\+/g, ' '));
+  
+  // Extract projectId from S3 key
+  // Format: uploads/{userId}/{projectId}/presentation.pdf
+  const parts = key.split('/');
+  const projectId = parts[2];
+  
+  // Fetch project details from DynamoDB
+  const project = await dynamoDB.get({
+    TableName: 'SlideRxProjects',
+    Key: { projectId }
+  }).promise();
+  
+  // Trigger N8N Stage 1
+  const n8nResponse = await fetch('http://TALAB_N8N_URL:5678/webhook/sliderx-stage1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      projectId: projectId,
+      s3Bucket: bucket,
+      s3Key: key,
+      projectBrief: project.Item.projectBrief
+    })
+  });
+  
+  console.log('N8N Stage 1 triggered:', await n8nResponse.json());
+  
+  // Update project status to "processing"
+  await dynamoDB.update({
+    TableName: 'SlideRxProjects',
+    Key: { projectId },
+    UpdateExpression: 'SET #status = :status',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: { ':status': 'processing' }
+  }).promise();
+};
+```
+
+#### API Endpoint: Receive Stage 1 Callback
+
+**Endpoint:** `POST /projects/{projectId}/review`
+
+**Handler:**
+```javascript
+// API Gateway Lambda handler
+exports.handler = async (event) => {
+  const projectId = event.pathParameters.projectId;
+  const body = JSON.parse(event.body);
+  
+  // Update DynamoDB
+  await dynamoDB.update({
+    TableName: 'SlideRxProjects',
+    Key: { projectId },
+    UpdateExpression: 'SET #status = :status, summary = :summary, reviewAndRefine = :reviewAndRefine, updatedAt = :updatedAt',
+    ExpressionAttributeNames: {
+      '#status': 'status'
+    },
+    ExpressionAttributeValues: {
+      ':status': body.status,
+      ':summary': body.summary,
+      ':reviewAndRefine': body.reviewAndRefine,
+      ':updatedAt': Date.now()
+    }
+  }).promise();
+  
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: 'Review data saved' })
+  };
+};
+```
+
+#### API Endpoint: Submit Answers → Trigger Stage 2
+
+**Endpoint:** `POST /projects/{projectId}/answers`
+
+**Handler:**
+```javascript
+exports.handler = async (event) => {
+  const projectId = event.pathParameters.projectId;
+  const { answers } = JSON.parse(event.body);
+  
+  // Get full project context from DynamoDB
+  const project = await dynamoDB.get({
+    TableName: 'SlideRxProjects',
+    Key: { projectId }
+  }).promise();
+  
+  // Update status to processing
+  await dynamoDB.update({
+    TableName: 'SlideRxProjects',
+    Key: { projectId },
+    UpdateExpression: 'SET #status = :status, userAnswers = :answers',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: {
+      ':status': 'processing',
+      ':answers': answers
+    }
+  }).promise();
+  
+  // Trigger N8N Stage 2
+  const n8nResponse = await fetch('http://TALAB_N8N_URL:5678/webhook/sliderx-stage2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      projectId: projectId,
+      projectBrief: project.Item.projectBrief,
+      reviewAndRefine: project.Item.reviewAndRefine,
+      summary: project.Item.summary,
+      userAnswers: answers
+    })
+  });
+  
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: 'Processing final slides' })
+  };
+};
+```
+
+#### API Endpoint: Receive Stage 2 Callback
+
+**Endpoint:** `POST /projects/{projectId}/complete`
+
+**Handler:**
+```javascript
+exports.handler = async (event) => {
+  const projectId = event.pathParameters.projectId;
+  const body = JSON.parse(event.body);
+  
+  await dynamoDB.update({
+    TableName: 'SlideRxProjects',
+    Key: { projectId },
+    UpdateExpression: 'SET #status = :status, downloadUrl = :downloadUrl, slides = :slides, updatedAt = :updatedAt',
+    ExpressionAttributeNames: {
+      '#status': 'status'
+    },
+    ExpressionAttributeValues: {
+      ':status': body.status,
+      ':downloadUrl': body.downloadUrl,
+      ':slides': body.slides,
+      ':updatedAt': Date.now()
+    }
+  }).promise();
+  
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ message: 'Project completed' })
+  };
+};
+```
+
+### For Phil (Frontend)
+
+#### Complete User Flow
+
+```javascript
+// 1. Create project and upload PDF
+const createProject = async (formData, pdfFile) => {
+  // Create project
+  const response = await fetch('https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-user-id': getCurrentUserId()
+    },
+    body: JSON.stringify({
+      businessPurpose: formData.businessPurpose,
+      projectPhase: formData.projectPhase,
+      keyMetrics: formData.keyMetrics,
+      currentBlockers: formData.currentBlockers,
+      fileName: 'presentation.pdf'
+    })
+  });
+  
+  const { projectId, uploadUrl } = await response.json();
+  
+  // Upload PDF to S3 presigned URL
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: pdfFile,
+    headers: { 'Content-Type': 'application/pdf' }
+  });
+  
+  return projectId;
+};
+
+// 2. Poll for project updates
+const pollProject = async (projectId) => {
+  const response = await fetch(
+    `https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/${projectId}`,
+    {
+      headers: { 'x-user-id': getCurrentUserId() }
+    }
+  );
+  
+  return await response.json();
+};
+
+// 3. Start polling loop
+const startPolling = (projectId) => {
+  const pollInterval = setInterval(async () => {
+    const project = await pollProject(projectId);
+    
+    switch (project.status) {
+      case 'uploading':
+        showStatus('Uploading PDF...');
+        break;
+      
+      case 'processing':
+        showStatus('Processing presentation...');
+        break;
+      
+      case 'needs_review':
+        clearInterval(pollInterval);
+        displayQuestions(project);
+        break;
+      
+      case 'ready':
+        clearInterval(pollInterval);
+        displayDownloadButton(project.downloadUrl);
+        break;
+    }
+  }, 3000); // Poll every 3 seconds
+};
+
+// 4. Display questions to user
+const displayQuestions = (project) => {
+  // Show per-slide summary
+  const summaryHtml = project.summary.map(slide => `
+    <div class="slide-summary">
+      <h3>Slide ${slide.slideNumber}: ${slide.title}</h3>
+      <p>${slide.keyPoints}</p>
+    </div>
+  `).join('');
+  
+  document.getElementById('summary-section').innerHTML = summaryHtml;
+  
+  // Show questions
+  const questionsHtml = project.reviewAndRefine.questions.map((q, index) => `
+    <div class="question">
+      <label>${q.question}</label>
+      <input type="text" id="answer-${index}" />
+    </div>
+  `).join('');
+  
+  document.getElementById('questions-section').innerHTML = questionsHtml;
+  document.getElementById('submit-answers-btn').style.display = 'block';
+};
+
+// 5. Submit answers
+const submitAnswers = async (projectId) => {
+  const questions = document.querySelectorAll('[id^="answer-"]');
+  const answers = Array.from(questions).map(input => input.value);
+  
+  await fetch(
+    `https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/${projectId}/answers`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': getCurrentUserId()
+      },
+      body: JSON.stringify({ answers })
+    }
+  );
+  
+  // Resume polling
+  showStatus('Generating final presentation...');
+  startPolling(projectId);
+};
+
+// 6. Download result
+const downloadResult = (downloadUrl) => {
+  window.open(downloadUrl, '_blank');
+};
+```
+
+---
+
+## Testing & Validation
+
+### Unit Tests
+
+#### Test 1: PDF Services Health Check
+
+```bash
+curl http://localhost:8000/health
+
+# Expected:
+# {
+#   "status": "healthy",
+#   "service": "SlideRx PDF Services",
+#   "endpoints": {
+#     "extract": "/extract-text",
+#     "generate": "/generate-pdf"
+#   }
+# }
+```
+
+#### Test 2: PDF Text Extraction
+
+```bash
+curl -X POST http://localhost:8000/extract-text \
+  -F "file=@test-presentation.pdf"
+
+# Expected: JSON with fullText, pageCount, slides array
+```
+
+#### Test 3: PDF Generation
+
+```bash
+curl -X POST http://localhost:8000/generate-pdf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-123",
+    "slide1": {
+      "title": "THE PROBLEM",
+      "visual": "Test visual description",
+      "sentence": "Test sentence for slide one"
+    },
+    "slide2": {
+      "title": "THE SOLUTION",
+      "visual": "Test visual",
+      "sentence": "Test sentence"
+    },
+    "slide3": {
+      "title": "THE ASK",
+      "visual": "Test visual",
+      "sentence": "Test sentence"
+    }
+  }' \
+  --output test-output.pdf
+
+# Expected: PDF file downloaded
+```
+
+### Integration Tests
+
+#### Test 4: Stage 1 Workflow (End-to-End)
+
+```bash
+# Prerequisites:
+# 1. Upload a test PDF to S3: sliderx-uploads-dev/uploads/test-user/test-123/presentation.pdf
+# 2. Have AWS credentials configured in N8N
+
+curl -X POST http://YOUR_IP:5678/webhook/sliderx-stage1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-123",
+    "s3Bucket": "sliderx-uploads-dev",
+    "s3Key": "uploads/test-user/test-123/presentation.pdf",
+    "projectBrief": {
+      "businessPurpose": "Status Update",
+      "projectPhase": "Kickoff phase concluded",
+      "keyMetrics": "34 user stories created",
+      "currentBlockers": "None"
+    }
+  }'
+
+# Expected response (60-90 seconds):
+# {
+#   "projectId": "test-123",
+#   "status": "needs_review",
+#   "message": "Initial processing complete. Awaiting user answers."
+# }
+
+# Verify API was called:
+# Check Vitor's API logs for POST /projects/test-123/review
+```
+
+#### Test 5: Stage 2 Workflow (End-to-End)
+
+```bash
+curl -X POST http://YOUR_IP:5678/webhook/sliderx-stage2 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-123",
+    "projectBrief": {
+      "businessPurpose": "Status Update",
+      "projectPhase": "Kickoff phase concluded",
+      "keyMetrics": "34 user stories created",
+      "currentBlockers": "None"
+    },
+    "reviewAndRefine": {
+      "questions": [
+        {"question": "What is the target audience?", "type": "text"},
+        {"question": "What is the desired outcome?", "type": "text"}
+      ]
+    },
+    "summary": [
+      {
+        "slideNumber": 1,
+        "title": "Introduction",
+        "keyPoints": "Project overview and team composition"
+      }
+    ],
+    "userAnswers": [
+      "Executive leadership team",
+      "Approval to proceed with Phase 2"
+    ]
+  }'
+
+# Expected response (60-120 seconds):
+# {
+#   "projectId": "test-123",
+#   "status": "ready",
+#   "downloadUrl": "https://sliderx-generated-dev.s3.eu-central-1.amazonaws.com/test-123/presentation-condensed.pdf",
+#   "message": "Final presentation generated successfully"
+# }
+
+# Verify:
+# 1. PDF exists in S3
+# 2. API was called: POST /projects/test-123/complete
+```
+
+### Load Testing
+
+```bash
+# Test concurrent requests
+for i in {1..10}; do
+  curl -X POST http://YOUR_IP:5678/webhook/sliderx-stage1 \
+    -H "Content-Type: application/json" \
+    -d "{\"projectId\": \"load-test-$i\", ...}" &
+done
+
+# Monitor N8N and PDF services
+docker stats sliderx-n8n sliderx-pdf-services
+```
+
+---
+
+## Deployment Checklist
+
+### Pre-Deployment
+
+- [ ] Docker and Docker Compose installed
+- [ ] Firewall ports opened (5678, 8000)
+- [ ] ngrok or public URL configured (if needed)
+- [ ] AWS credentials obtained from Vitor
+  - [ ] Access Key ID
+  - [ ] Secret Access Key
+  - [ ] S3 bucket names confirmed
+  - [ ] Region: eu-central-1
+- [ ] OpenRouter API key obtained
+- [ ] Test PDF files prepared
+
+### Deployment Steps
+
+1. [ ] Clone/create project directory
+2. [ ] Create `docker-compose.yml`
+3. [ ] Create `pdf_services.py`
+4. [ ] Update `WEBHOOK_URL` in docker-compose.yml
+5. [ ] Start services: `docker-compose up -d`
+6. [ ] Wait for services to start (30 seconds)
+7. [ ] Verify services: `docker-compose ps`
+8. [ ] Access N8N: `http://YOUR_IP:5678`
+9. [ ] Login: admin / sliderx123
+
+### N8N Configuration
+
+10. [ ] Configure AWS S3 credentials
+    - [ ] Settings → Credentials → New
+    - [ ] Select "AWS"
+    - [ ] Enter Access Key ID and Secret
+    - [ ] Region: eu-central-1
+    - [ ] Test connection
+11. [ ] Configure OpenRouter credentials
+    - [ ] Settings → Credentials → New
+    - [ ] Select "HTTP Header Auth"
+    - [ ] Header Name: `Authorization`
+    - [ ] Header Value: `Bearer YOUR_KEY`
+    - [ ] Test with workflow
+12. [ ] Import Workflow 1 (Stage 1)
+    - [ ] Copy JSON from workflow-stage1.json
+    - [ ] Import in N8N
+    - [ ] Update credential references
+    - [ ] Save
+13. [ ] Import Workflow 2 (Stage 2)
+    - [ ] Copy JSON from workflow-stage2.json
+    - [ ] Import in N8N
+    - [ ] Update credential references
+    - [ ] Save
+14. [ ] Activate both workflows
+15. [ ] Copy webhook URLs
+    - [ ] Stage 1: `http://YOUR_IP:5678/webhook/sliderx-stage1`
+    - [ ] Stage 2: `http://YOUR_IP:5678/webhook/sliderx-stage2`
+
+### Integration
+
+16. [ ] Share webhook URLs with Vitor
+17. [ ] Confirm Vitor's API endpoints
+    - [ ] POST /projects/{projectId}/review
+    - [ ] POST /projects/{projectId}/complete
+18. [ ] Test with sample PDF
+19. [ ] Verify end-to-end flow
+20. [ ] Monitor logs for errors
+
+### Post-Deployment
+
+21. [ ] Document actual webhook URLs in team docs
+22. [ ] Set up monitoring/alerts (optional)
+23. [ ] Create backup of N8N data: `tar -czf n8n-backup.tar.gz n8n-data/`
+24. [ ] Share access credentials with team (securely)
+
+---
+
+## Troubleshooting
+
+### N8N Won't Start
+
+**Symptoms:** Container exits immediately
+
+**Solution:**
+```bash
+# Check logs
+docker-compose logs n8n
+
+# Common issues:
+# 1. Port 5678 already in use
+sudo lsof -i :5678
+sudo kill -9 PID
+
+# 2. Insufficient memory
+# Edit docker-compose.yml, reduce memory limit
+
+# 3. Corrupted data
+docker-compose down
+rm -rf n8n-data/*
+docker-compose up -d
+```
+
+### PDF Services Not Responding
+
+**Symptoms:** `curl http://localhost:8000/health` fails
+
+**Solution:**
+```bash
+# Check if running
+docker-compose ps
+
+# Check logs
+docker-compose logs pdf-services
+
+# Common issues:
+# 1. Python dependencies failed to install
+docker-compose down
+docker-compose up -d --force-recreate
+
+# 2. Port 8000 in use
+sudo lsof -i :8000
+```
+
+### Workflow Fails at AI Call
+
+**Symptoms:** OpenRouter returns 401 or 403
+
+**Solution:**
+```bash
+# Verify API key
+curl -X POST https://openrouter.ai/api/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"anthropic/claude-sonnet-4","messages":[{"role":"user","content":"test"}]}'
+
+# If fails, get new API key from OpenRouter
+# Update in N8N: Settings → Credentials → OpenRouter API → Edit
+```
+
+### S3 Download Fails
+
+**Symptoms:** "Access Denied" or "InvalidAccessKeyId"
+
+**Solution:**
+```bash
+# Test AWS credentials
+aws s3 ls s3://sliderx-uploads-dev/
+
+# If fails, verify:
+# 1. Access Key ID correct
+# 2. Secret Access Key correct
+# 3. IAM user has s3:GetObject permission
+# 4. Bucket name is correct
+
+# Update in N8N: Settings → Credentials → AWS → Edit
+```
+
+### AI Returns Invalid JSON
+
+**Symptoms:** "Failed to parse AI response"
+
+**Solution:**
+- Check N8N execution logs (click on failed node)
+- Look at actual AI response
+- Common causes:
+  - AI wrapped response in markdown code blocks (handled in workflow)
+  - AI returned incomplete JSON (increase max_tokens)
+  - AI misunderstood prompt (refine system prompt)
+
+### Webhook Not Receiving Requests
+
+**Symptoms:** Vitor's Lambda times out calling N8N
+
+**Solution:**
+```bash
+# 1. Verify N8N is accessible from internet
+curl http://YOUR_PUBLIC_IP:5678/webhook/sliderx-stage1
+
+# 2. Check firewall
+sudo ufw status
+sudo ufw allow 5678/tcp
+
+# 3. Verify ngrok is running (if using)
+curl http://localhost:4040/api/tunnels
+
+# 4. Test with public URL
+curl -X POST https://YOUR_NGROK_URL.ngrok-free.app/webhook/sliderx-stage1 \
+  -H "Content-Type: application/json" \
+  -d '{"projectId":"test",...}'
+```
+
+### Memory Issues
+
+**Symptoms:** Docker containers killed by OOM
+
+**Solution:**
+```bash
+# Check memory usage
+docker stats
+
+# Reduce limits in docker-compose.yml:
+# n8n: memory: 2G (instead of 4G)
+# pdf-services: memory: 1G (instead of 2G)
+
+docker-compose down
+docker-compose up -d
+```
+
+---
+
+## Quick Reference
+
+### Useful Commands
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View N8N logs only
+docker-compose logs -f n8n
+
+# View PDF services logs only
+docker-compose logs -f pdf-services
+
+# Restart everything
+docker-compose restart
+
+# Stop everything
+docker-compose down
+
+# Start everything
+docker-compose up -d
+
+# Force recreate containers
+docker-compose up -d --force-recreate
+
+# Check container status
+docker-compose ps
+
+# Check resource usage
+docker stats
+
+# Access N8N container shell
+docker exec -it sliderx-n8n bash
+
+# Access PDF services container shell
+docker exec -it sliderx-pdf-services bash
+
+# Backup N8N data
+tar -czf n8n-backup-$(date +%Y%m%d).tar.gz n8n-data/
+
+# Restore N8N data
+tar -xzf n8n-backup-20250108.tar.gz
+```
+
+### Important URLs
+
+- **N8N UI:** `http://YOUR_IP:5678`
+- **PDF Services:** `http://YOUR_IP:8000`
+- **PDF Services Health:** `http://YOUR_IP:8000/health`
+- **Stage 1 Webhook:** `http://YOUR_IP:5678/webhook/sliderx-stage1`
+- **Stage 2 Webhook:** `http://YOUR_IP:5678/webhook/sliderx-stage2`
+- **AWS API Gateway:** `https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev`
+
+### Key Files
+
+- `docker-compose.yml` - Container orchestration
+- `pdf_services.py` - PDF processing microservices
+- `workflow-stage1.json` - N8N Stage 1 workflow
+- `workflow-stage2.json` - N8N Stage 2 workflow
+-
