@@ -80,7 +80,7 @@ const Dashboard = () => {
         text: 'Finalizing...',
         animate: false
       },
-      'completed': {
+      'complete': {
         color: 'bg-[#10B981] text-white',
         icon: '🟢',
         text: 'Ready to View',
@@ -97,7 +97,7 @@ const Dashboard = () => {
     switch (status) {
       case 'needs_review':
         return 'Answer Questions →';
-      case 'completed':
+      case 'complete':
         return 'View Results →';
       case 'processing':
       case 'generating presentation':
@@ -125,9 +125,11 @@ const Dashboard = () => {
     if (status === 'needs_review') {
       console.log(`Navigating to /followup/${projectId}`);
       navigate(`/followup/${projectId}`);
-    } else if (status === 'completed') {
+    } else if (status === 'complete') {
       console.log(`Navigating to /results/${projectId}`);
-      navigate(`/results/${projectId}`);
+      console.log('FULL PROJECT:', project);
+      console.log('PROJECT KEYS:', Object.keys(project));
+      navigate(`/results/${projectId}`, { state: { project } });
     } else if (status === 'processing' || status === 'generating presentation') {
       console.log(`Navigating to /processing/${projectId}`);
       navigate(`/processing/${projectId}`);

@@ -14,8 +14,8 @@
  * 3. Navigate to this page after processing completes
  */
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 // Mock data - In production, this would come from API/state management
 const MOCK_RESULTS = {
@@ -96,28 +96,35 @@ const MOCK_RESULTS = {
 };
 
 const Results = () => {
+  const { projectId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passedProject = location.state?.project;
   const [reportExpanded, setReportExpanded] = useState(false);
+  const [projectData, setProjectData] = useState(null);
 
-  // Calculate meeting date (current date + 5 days)
-  const getMeetingDate = () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 5);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+  // Use project data passed from Dashboard
+  useEffect(() => {
+    if (passedProject) {
+      console.log('Using passed project data:', passedProject);
+      setProjectData(passedProject);
+    } else {
+      console.error('No project data passed from Dashboard');
+    }
+  }, [passedProject]);
 
-  // Replace {{meetingDate}} placeholder in slide 3
-  const slides = MOCK_RESULTS.slides.map(slide => ({
-    ...slide,
-    oneSentence: slide.oneSentence.replace('{{meetingDate}}', getMeetingDate())
-  }));
+  // Get slides directly from project data
+  const slides = projectData?.summary?.slides || [];
 
   // Handler functions
   const handleDownloadPDF = () => {
     console.log('=== Download PDF ===');
     console.log('Downloading executive summary as PDF...');
-    console.log('File:', `${MOCK_RESULTS.originalFileName.replace('.pdf', '')}_ExecutiveSummary.pdf`);
-    // In production, this would trigger actual PDF download
+    if (projectData?.downloadUrl) {
+      window.open(projectData.downloadUrl, '_blank');
+    } else {
+      console.error('No download URL available');
+    }
   };
 
   const handleAnalyzeAnother = () => {
@@ -166,9 +173,9 @@ const Results = () => {
             Your Executive Summary
           </h1>
           <div className="flex items-center gap-4 text-[#64748B]">
-            <span className="text-sm">Original: {MOCK_RESULTS.originalFileName}</span>
+            <span className="text-sm">Original: {projectData?.originalFileName || 'Unknown'}</span>
             <span className="text-2xl font-bold text-[#10B981]">
-              {MOCK_RESULTS.originalSlideCount} slides → {MOCK_RESULTS.finalSlideCount} slides
+              {projectData?.originalSlideCount || 0} slides → {projectData?.finalSlideCount || 0} slides
             </span>
           </div>
         </div>
