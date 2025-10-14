@@ -9,14 +9,14 @@
  * All data is mock/client-side only - no backend integration yet.
  */
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Upload from './components/Upload';
-import Logout from './components/Logout';
-import Processing from './components/Processing';
-import FollowUp from './components/FollowUp';
-import Results from './components/Results';
-import Dashboard from './components/Dashboard';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import Upload from "./components/Upload";
+import Logout from "./components/Logout";
+import Processing from "./components/Processing";
+import FollowUp from "./components/FollowUp";
+import Results from "./components/Results";
+import Dashboard from "./components/Dashboard";
 
 // Simple Home/Landing page component
 const Home = () => {
@@ -42,7 +42,9 @@ const Home = () => {
               <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl font-bold text-white">1</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Upload</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Upload
+              </h3>
               <p className="text-[#64748B]">
                 Upload your presentation (max 15 slides, PDF format)
               </p>
@@ -52,7 +54,9 @@ const Home = () => {
               <div className="w-12 h-12 bg-[#10B981] rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl font-bold text-white">2</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Analyze</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Analyze
+              </h3>
               <p className="text-[#64748B]">
                 AI analyzes your deck using time-tested presentation principles
               </p>
@@ -62,7 +66,9 @@ const Home = () => {
               <div className="w-12 h-12 bg-[#F59E0B] rounded-full flex items-center justify-center mb-4">
                 <span className="text-2xl font-bold text-white">3</span>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Learn</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Learn
+              </h3>
               <p className="text-[#64748B]">
                 Get a 3-slide summary with educational feedback on improvements
               </p>

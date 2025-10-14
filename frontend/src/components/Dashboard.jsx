@@ -14,16 +14,17 @@
  * 3. Navigate to /dashboard to see all projects
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getCurrentUser } from "aws-amplify/auth";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
   // API Configuration
-  // TODO: Replace 'test-user' with authenticated user ID when auth system is integrated
-  const API_BASE_URL = 'https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev';
-  const USER_ID = 'test-user';
+  const API_BASE_URL =
+    "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev";
+  const [userId, setUserId] = useState(null);
 
   // State management
   const [projects, setProjects] = useState([]);
@@ -33,7 +34,7 @@ const Dashboard = () => {
 
   // Format timestamp to relative time
   const formatRelativeTime = (timestamp) => {
-    if (!timestamp) return 'Unknown date';
+    if (!timestamp) return "Unknown date";
 
     const now = new Date();
     const date = new Date(timestamp);
@@ -43,69 +44,75 @@ const Dashboard = () => {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffSecs < 60) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-    if (diffDays === 1) return 'Yesterday';
+    if (diffSecs < 60) return "Just now";
+    if (diffMins < 60)
+      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+    if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
 
     // Format as "Oct 10, 2025"
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   // Get status badge configuration
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'uploading': {
-        color: 'bg-[#3B82F6] text-white',
-        icon: '🔵',
-        text: 'Uploading...',
-        animate: false
+      uploading: {
+        color: "bg-[#3B82F6] text-white",
+        icon: "🔵",
+        text: "Uploading...",
+        animate: false,
       },
-      'processing': {
-        color: 'bg-[#F59E0B] text-white',
-        icon: '🟡',
-        text: 'Analyzing...',
-        animate: false
+      processing: {
+        color: "bg-[#F59E0B] text-white",
+        icon: "🟡",
+        text: "Analyzing...",
+        animate: false,
       },
-      'needs_review': {
-        color: 'bg-[#F97316] text-white',
-        icon: '🟠',
-        text: 'Action Required',
-        animate: true
+      needs_review: {
+        color: "bg-[#F97316] text-white",
+        icon: "🟠",
+        text: "Action Required",
+        animate: true,
       },
-      'generating presentation': {
-        color: 'bg-[#8B5CF6] text-white',
-        icon: '🟣',
-        text: 'Finalizing...',
-        animate: false
+      "generating presentation": {
+        color: "bg-[#8B5CF6] text-white",
+        icon: "🟣",
+        text: "Finalizing...",
+        animate: false,
       },
-      'completed': {
-        color: 'bg-[#10B981] text-white',
-        icon: '🟢',
-        text: 'Ready to View',
-        animate: false
-      }
+      complete: {
+        color: "bg-[#10B981] text-white",
+        icon: "🟢",
+        text: "Ready to View",
+        animate: false,
+      },
     };
 
     // Default to processing if status is unknown
-    return statusConfig[status] || statusConfig['processing'];
+    return statusConfig[status] || statusConfig["processing"];
   };
 
   // Get action button text based on status
   const getActionButtonText = (status) => {
     switch (status) {
-      case 'needs_review':
-        return 'Answer Questions →';
-      case 'completed':
-        return 'View Results →';
-      case 'processing':
-      case 'generating presentation':
-        return 'View Status →';
-      case 'uploading':
-        return 'Processing...';
+      case "needs_review":
+        return "Answer Questions →";
+      case "complete":
+        return "View Result →";
+      case "processing":
+      case "generating presentation":
+        return "View Status →";
+      case "uploading":
+        return "Processing...";
       default:
-        return 'View Status →';
+        return "View Status →";
     }
   };
 
@@ -115,20 +122,23 @@ const Dashboard = () => {
 
     console.log(`Card clicked: ${projectId}, status: ${status}`);
 
-    if (status === 'uploading') {
-      console.log('Project is still uploading, showing toast message');
+    if (status === "uploading") {
+      console.log("Project is still uploading, showing toast message");
       // In production, show a toast notification
-      alert('Project is still uploading. Please wait...');
+      alert("Project is still uploading. Please wait...");
       return;
     }
 
-    if (status === 'needs_review') {
+    if (status === "needs_review") {
       console.log(`Navigating to /followup/${projectId}`);
       navigate(`/followup/${projectId}`);
-    } else if (status === 'completed') {
-      console.log(`Navigating to /results/${projectId}`);
-      navigate(`/results/${projectId}`);
-    } else if (status === 'processing' || status === 'generating presentation') {
+    } else if (status === "complete" || status === "completed") {
+      console.log(`Navigating to /results/${projectId} with project data`);
+      navigate(`/results/${projectId}`, { state: { project } });
+    } else if (
+      status === "processing" ||
+      status === "generating presentation"
+    ) {
       console.log(`Navigating to /processing/${projectId}`);
       navigate(`/processing/${projectId}`);
     }
@@ -136,34 +146,38 @@ const Dashboard = () => {
 
   // Handle new project button
   const handleNewProject = () => {
-    console.log('New Project clicked');
-    navigate('/upload');
+    console.log("New Project clicked");
+    navigate("/upload");
   };
 
   // Handle logout button
   const handleLogout = () => {
-    console.log('Logout clicked');
-    navigate('/');
+    navigate("/logout");
   };
 
   // Fetch projects from API
   const fetchProjects = async () => {
+    if (!userId) return;
     try {
-      console.log('Fetching projects...');
+      console.log("Fetching projects...");
+      console.log("Using x-user-id:", userId);
       const response = await fetch(`${API_BASE_URL}/projects`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'x-user-id': USER_ID
-        }
+          "x-user-id": userId,
+        },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load projects. Please try again.');
+        const errText = await response.text().catch(() => "");
+        throw new Error(
+          `Failed to load projects (${response.status}). ${errText}`
+        );
       }
 
       const data = await response.json();
       console.log(`Fetched ${data.items?.length || 0} projects`);
-      console.log('Projects data:', data);
+      console.log("Projects data:", data);
 
       // Sort projects by createdAt (most recent first)
       const sortedProjects = (data.items || []).sort((a, b) => {
@@ -172,31 +186,58 @@ const Dashboard = () => {
         return dateB - dateA;
       });
 
+      console.log("Sorted projects:", sortedProjects[0]);
+
       setProjects(sortedProjects);
       setNextToken(data.nextToken || null);
       setError(null);
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching projects:', err);
-      setError(err.message || 'Unable to load projects. Please refresh the page.');
+      console.error("Error fetching projects:", err);
+      setError(
+        err.message || "Unable to load projects. Please refresh the page."
+      );
       setLoading(false);
     }
   };
 
-  // Fetch projects on mount
+  // Load authenticated user id (Cognito sub)
   useEffect(() => {
-    fetchProjects();
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (mounted) setUserId(user?.userId);
+      } catch (e) {
+        console.error("Failed to get current user", e);
+        if (mounted) {
+          setError("Authentication error. Please sign in again.");
+          setLoading(false);
+        }
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // Fetch projects once userId is ready
+  useEffect(() => {
+    if (userId) {
+      fetchProjects();
+    }
+  }, [userId]);
 
   // Auto-refresh every 30 seconds to update statuses
   useEffect(() => {
+    if (!userId) return;
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing projects...');
+      console.log("Auto-refreshing projects...");
       fetchProjects();
     }, 30000); // 30 seconds
 
     return () => clearInterval(refreshInterval);
-  }, []);
+  }, [userId]);
 
   // Retry handler for error state
   const handleRetry = () => {
@@ -207,12 +248,16 @@ const Dashboard = () => {
 
   // Extract business purpose from project
   const getBusinessPurpose = (project) => {
-    return project.businessPurpose || project.projectBrief?.businessPurpose || 'Untitled Project';
+    return (
+      project.businessPurpose ||
+      project.projectBrief?.businessPurpose ||
+      "Untitled Project"
+    );
   };
 
   // Get display name for project card
   const getDisplayName = (project) => {
-    return project.projectName || project.projectId || 'Untitled Project';
+    return project.projectName || project.projectId || "Untitled Project";
   };
 
   // Loading state
@@ -286,8 +331,18 @@ const Dashboard = () => {
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="max-w-md mx-auto text-center">
               <div className="bg-white rounded-lg shadow-lg p-8">
-                <svg className="w-16 h-16 text-[#EF4444] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-16 h-16 text-[#EF4444] mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
                 <p className="text-[#64748B] mb-6">{error}</p>
@@ -326,11 +381,25 @@ const Dashboard = () => {
         <main className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
-              <svg className="w-24 h-24 text-[#64748B] mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              <svg
+                className="w-24 h-24 text-[#64748B] mx-auto mb-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                />
               </svg>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No projects yet</h2>
-              <p className="text-[#64748B] mb-8">Upload your first presentation to get started</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                No projects yet
+              </h2>
+              <p className="text-[#64748B] mb-8">
+                Upload your first presentation to get started
+              </p>
               <button
                 onClick={handleNewProject}
                 className="px-8 py-3 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-semibold shadow-lg hover:shadow-xl"
@@ -365,18 +434,32 @@ const Dashboard = () => {
         {/* Page Title Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">My Projects</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+              My Projects
+            </h2>
             <p className="text-[#64748B]">
               Manage your presentation transformations
-              <span className="ml-2 text-sm font-medium">• {projects.length} Project{projects.length === 1 ? '' : 's'}</span>
+              <span className="ml-2 text-sm font-medium">
+                • {projects.length} Project{projects.length === 1 ? "" : "s"}
+              </span>
             </p>
           </div>
           <button
             onClick={handleNewProject}
             className="mt-4 sm:mt-0 px-6 py-3 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             New Project
           </button>
@@ -389,14 +472,14 @@ const Dashboard = () => {
             const businessPurpose = getBusinessPurpose(project);
             const displayName = getDisplayName(project);
             const actionText = getActionButtonText(project.status);
-            const isUploading = project.status === 'uploading';
+            const isUploading = project.status === "uploading";
 
             return (
               <article
                 key={project.projectId}
                 className="bg-white rounded-xl border border-gray-200 p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
                 onClick={() => handleCardClick(project)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCardClick(project)}
+                onKeyDown={(e) => e.key === "Enter" && handleCardClick(project)}
                 tabIndex={0}
                 role="button"
                 aria-label={`Open project: ${displayName}`}
@@ -404,7 +487,9 @@ const Dashboard = () => {
                 {/* Status Badge */}
                 <div className="mb-4">
                   <span
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${statusBadge.color} ${statusBadge.animate ? 'animate-pulse' : ''}`}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                      statusBadge.color
+                    } ${statusBadge.animate ? "animate-pulse" : ""}`}
                     aria-label={`Status: ${statusBadge.text}`}
                   >
                     <span className="text-xs">{statusBadge.icon}</span>
@@ -427,17 +512,20 @@ const Dashboard = () => {
                 {/* Metadata */}
                 <div className="text-sm text-[#64748B] mb-4">
                   <p>Created {formatRelativeTime(project.createdAt)}</p>
-                  {project.projectName && project.projectName !== project.projectId && (
-                    <p className="text-xs mt-1 truncate">ID: {project.projectName}</p>
-                  )}
+                  {project.projectName &&
+                    project.projectName !== project.projectId && (
+                      <p className="text-xs mt-1 truncate">
+                        ID: {project.projectName}
+                      </p>
+                    )}
                 </div>
 
                 {/* Action Button */}
                 <button
                   className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
                     isUploading
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-[#2563EB] text-white hover:bg-[#1e40af]'
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-[#2563EB] text-white hover:bg-[#1e40af]"
                   }`}
                   disabled={isUploading}
                   onClick={(e) => {
@@ -451,7 +539,8 @@ const Dashboard = () => {
 
                 {/* ⚠️⚠️⚠️ TEMPORARY DEBUG - DELETE THIS BEFORE PRODUCTION ⚠️⚠️⚠️ */}
                 <p className="text-xs italic text-[#64748B] mt-2 text-center">
-                  Project ID: {project.projectId}<br />
+                  Project ID: {project.projectId}
+                  <br />
                   Status: {project.status}
                 </p>
                 {/* ⚠️⚠️⚠️ END TEMPORARY DEBUG ⚠️⚠️⚠️ */}
@@ -465,7 +554,9 @@ const Dashboard = () => {
           <div className="mt-8 text-center">
             <button
               onClick={() => {
-                console.log('Load More clicked - pagination not yet implemented');
+                console.log(
+                  "Load More clicked - pagination not yet implemented"
+                );
                 // TODO: Implement pagination when backend supports it
               }}
               className="px-6 py-3 bg-white text-[#2563EB] border-2 border-[#2563EB] rounded-lg hover:bg-blue-50 transition-colors font-semibold"

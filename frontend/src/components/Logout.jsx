@@ -4,10 +4,26 @@
  * Simple logout confirmation page with branding message
  */
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { signOut } from "aws-amplify/auth";
 
 const Logout = () => {
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const doSignOut = async () => {
+      try {
+        await signOut();
+      } catch (e) {
+        // ignore
+      } finally {
+        setDone(true);
+      }
+    };
+    doSignOut();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#2563EB] to-[#1e40af] flex items-center justify-center px-4">
       <div className="max-w-2xl mx-auto text-center">
@@ -21,15 +37,26 @@ const Logout = () => {
               Thank you for using SlideRx!
             </h2>
             <p className="text-xl text-[#64748B] italic">
-              Helping business professionals increase their impact, one slide at a time.
+              Helping business professionals increase their impact, one slide at
+              a time.
             </p>
           </div>
 
           {/* Checkmark icon */}
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20 bg-[#10B981] rounded-full flex items-center justify-center">
-              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-12 h-12 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
           </div>
@@ -43,17 +70,19 @@ const Logout = () => {
               Return to Home
             </Link>
             <Link
-              to="/upload"
+              to="/"
               className="px-8 py-3 bg-white text-[#2563EB] border-2 border-[#2563EB] rounded-lg font-semibold hover:bg-blue-50 transition-colors"
             >
-              Transform Another Deck
+              Sign in again
             </Link>
           </div>
         </div>
 
         {/* Footer note */}
         <p className="text-blue-100 text-sm mt-6">
-          You have been successfully logged out.
+          {done
+            ? "You have been successfully logged out."
+            : "Signing you out..."}
         </p>
       </div>
     </div>
