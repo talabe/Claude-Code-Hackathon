@@ -15,8 +15,9 @@
  * 3. Navigate to this page after upload form submission
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { getCurrentUser } from "aws-amplify/auth";
 
 // Content arrays - parsed from markdown files
 const CITATIONS = [
@@ -29,7 +30,7 @@ const CITATIONS = [
   "The brain starts working the moment you are born and never stops until you stand up to speak in public. - George Jessel",
   "Tell me and I forget. Teach me and I remember. Involve me and I learn. - Benjamin Franklin",
   "The success of your presentation will be judged not by the knowledge you send but by what the listener receives. - Lilly Walters",
-  "Death by PowerPoint is a fate we've all suffered, but it doesn't have to be that way. - David JP Phillips"
+  "Death by PowerPoint is a fate we've all suffered, but it doesn't have to be that way. - David JP Phillips",
 ];
 
 const PPT_TRICKS = [
@@ -42,7 +43,7 @@ const PPT_TRICKS = [
   "Create custom slide sizes under Design > Slide Size for non-standard formats",
   "Use Selection Pane (Home > Select > Selection Pane) to manage overlapping objects",
   "Embed fonts (File > Options > Save) so your presentation looks the same on any computer",
-  "Press Alt+F5 to start presenting from the current slide instead of the beginning"
+  "Press Alt+F5 to start presenting from the current slide instead of the beginning",
 ];
 
 // Helper function to shuffle array
@@ -58,8 +59,8 @@ const shuffleArray = (array) => {
 // Prepare and shuffle content outside component to ensure it's ready immediately
 const prepareContent = () => {
   const allContent = [
-    ...CITATIONS.map(text => ({ text, type: 'citation' })),
-    ...PPT_TRICKS.map(text => ({ text, type: 'tip' }))
+    ...CITATIONS.map((text) => ({ text, type: "citation" })),
+    ...PPT_TRICKS.map((text) => ({ text, type: "tip" })),
   ];
   return shuffleArray(allContent);
 };
@@ -67,17 +68,39 @@ const prepareContent = () => {
 const Processing = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
+  const location = useLocation();
+
+  // Get project data from navigation state (passed from FollowUp)
+  const [projectData, setProjectData] = useState(
+    location.state?.project || null
+  );
 
   // API Configuration
-  const API_BASE_URL = 'https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev';
-  const USER_ID = 'test-user';
+  const API_BASE_URL =
+    "https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev";
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (mounted) setUserId(user?.userId);
+      } catch (e) {
+        console.error("Failed to get current user", e);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Initialize with shuffled content immediately
   const [shuffledContent] = useState(() => prepareContent());
   const [currentContent, setCurrentContent] = useState(shuffledContent[0]);
   const [contentIndex, setContentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [minLoadingTimeMet, setMinLoadingTimeMet] = useState(false);
 
   // Content rotation logic
@@ -95,7 +118,7 @@ const Processing = () => {
   const handleNext = () => {
     setIsVisible(false);
     setTimeout(() => {
-      setContentIndex(prevIndex => {
+      setContentIndex((prevIndex) => {
         const nextIndex = (prevIndex + 1) % shuffledContent.length;
         setCurrentContent(shuffledContent[nextIndex]);
         return nextIndex;
@@ -107,8 +130,9 @@ const Processing = () => {
   const handlePrevious = () => {
     setIsVisible(false);
     setTimeout(() => {
-      setContentIndex(prevIndex => {
-        const prevIndexValue = prevIndex === 0 ? shuffledContent.length - 1 : prevIndex - 1;
+      setContentIndex((prevIndex) => {
+        const prevIndexValue =
+          prevIndex === 0 ? shuffledContent.length - 1 : prevIndex - 1;
         setCurrentContent(shuffledContent[prevIndexValue]);
         return prevIndexValue;
       });
@@ -119,8 +143,8 @@ const Processing = () => {
   // Validate projectId on mount
   useEffect(() => {
     if (!projectId) {
-      setError('Invalid project ID');
-      console.error('No projectId found in URL');
+      setError("Invalid project ID");
+      console.error("No projectId found in URL");
     }
   }, [projectId]);
 
@@ -135,52 +159,94 @@ const Processing = () => {
 
   // Poll backend API for project status
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !userId) return;
 
     let isSubscribed = true;
 
     const checkProjectStatus = async () => {
       try {
+        console.log("Checking project status with x-user-id:", userId);
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'x-user-id': USER_ID
-          }
+            "x-user-id": userId,
+          },
         });
 
         if (!response.ok) {
-          throw new Error('Unable to check processing status. Please refresh the page.');
+          const errText = await response.text().catch(() => "");
+          throw new Error(
+            `Unable to check processing status (${response.status}). ${errText}`
+          );
         }
 
         const data = await response.json();
-        console.log('Project status:', data.status);
+        console.log("Project status:", data.status);
+
+        // Create merged project data
+        let mergedProjectData;
+        if (!projectData) {
+          // If we don't have project data yet (direct navigation), use full API response
+          mergedProjectData = data;
+          setProjectData(data);
+        } else {
+          // Merge the status and downloadUrl updates with existing project data
+          mergedProjectData = {
+            ...projectData,
+            status: data.status,
+            downloadUrl: data.downloadUrl,
+            updatedAt: data.updatedAt,
+          };
+          setProjectData(mergedProjectData);
+        }
 
         // Check 1: Are there unanswered follow-up questions?
         if (data.reviewAndRefine && Array.isArray(data.reviewAndRefine)) {
-          console.log('reviewAndRefine detected:', data.reviewAndRefine);
+          console.log("reviewAndRefine detected:", data.reviewAndRefine);
 
           const hasUnansweredQuestions = data.reviewAndRefine.some(
-            q => !q.userAnswer || q.userAnswer.trim() === ""
+            (q) => !q.userAnswer || q.userAnswer.trim() === ""
           );
 
           if (hasUnansweredQuestions && minLoadingTimeMet && isSubscribed) {
-            console.log('Unanswered follow-up questions found. Navigating to follow-up page...');
-            navigate(`/followup/${projectId}`);
+            console.log(
+              "Unanswered follow-up questions found. Navigating to follow-up page..."
+            );
+            navigate(`/followup/${projectId}`, {
+              state: { project: mergedProjectData },
+            });
             return;
           } else if (!hasUnansweredQuestions) {
-            console.log('All follow-up questions answered. Continuing to check completion status...');
+            console.log(
+              "All follow-up questions answered. Continuing to check completion status..."
+            );
           }
         }
 
         // Check 2: If completed and minimum loading time has passed, navigate to results
-        if ((data.status === 'completed' || data.status === 'complete') && minLoadingTimeMet && isSubscribed) {
-          console.log('Processing complete. Navigating to results...');
-          navigate(`/results/${projectId}`);
+        if (
+          (data.status === "completed" || data.status === "complete") &&
+          minLoadingTimeMet &&
+          isSubscribed
+        ) {
+          console.log(
+            "Processing complete. Navigating to results with merged project data..."
+          );
+          console.log(
+            "Merged project data includes downloadUrl:",
+            mergedProjectData.downloadUrl
+          );
+          navigate(`/results/${projectId}`, {
+            state: { project: mergedProjectData },
+          });
         }
       } catch (err) {
-        console.error('Status check error:', err);
+        console.error("Status check error:", err);
         if (isSubscribed) {
-          setError(err.message || 'Unable to check processing status. Please refresh the page.');
+          setError(
+            err.message ||
+              "Unable to check processing status. Please refresh the page."
+          );
         }
       }
     };
@@ -195,7 +261,7 @@ const Processing = () => {
       isSubscribed = false;
       clearInterval(pollInterval);
     };
-  }, [projectId, minLoadingTimeMet, navigate, API_BASE_URL, USER_ID]);
+  }, [projectId, minLoadingTimeMet, navigate, API_BASE_URL, userId]);
 
   // Show error state if there's an error
   if (error) {
@@ -203,13 +269,23 @@ const Processing = () => {
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
         <div className="max-w-md mx-auto px-4">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-            <svg className="w-16 h-16 text-[#EF4444] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-16 h-16 text-[#EF4444] mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
             <p className="text-[#64748B] mb-6">{error}</p>
             <button
-              onClick={() => navigate('/upload')}
+              onClick={() => navigate("/upload")}
               className="px-6 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-medium"
             >
               Back to Upload
@@ -234,7 +310,6 @@ const Processing = () => {
       {/* Main Content */}
       <main className="max-w-[800px] mx-auto px-4 sm:px-8 py-8 sm:py-16">
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
-
           {/* Loading Spinner */}
           <div className="mb-8">
             <svg
@@ -281,7 +356,12 @@ const Processing = () => {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
 
@@ -291,27 +371,31 @@ const Processing = () => {
                 className="transition-opacity duration-300 ease-in-out"
                 style={{ opacity: isVisible ? 1 : 0 }}
               >
-              {currentContent.type === 'citation' ? (
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0">💬</span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#2563EB] mb-2">Presentation Wisdom:</p>
-                    <p className="text-base sm:text-lg text-gray-800 italic leading-relaxed">
-                      {currentContent.text}
-                    </p>
+                {currentContent.type === "citation" ? (
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">💬</span>
+                    <div>
+                      <p className="text-sm font-semibold text-[#2563EB] mb-2">
+                        Presentation Wisdom:
+                      </p>
+                      <p className="text-base sm:text-lg text-gray-800 italic leading-relaxed">
+                        {currentContent.text}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0">💡</span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#2563EB] mb-2">PowerPoint Pro Tip:</p>
-                    <p className="text-base sm:text-lg text-gray-800 leading-relaxed">
-                      {currentContent.text}
-                    </p>
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">💡</span>
+                    <div>
+                      <p className="text-sm font-semibold text-[#2563EB] mb-2">
+                        PowerPoint Pro Tip:
+                      </p>
+                      <p className="text-base sm:text-lg text-gray-800 leading-relaxed">
+                        {currentContent.text}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
             </div>
 
@@ -327,7 +411,12 @@ const Processing = () => {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -338,9 +427,7 @@ const Processing = () => {
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                  i === contentIndex % 5
-                    ? 'bg-[#2563EB] w-8'
-                    : 'bg-gray-300'
+                  i === contentIndex % 5 ? "bg-[#2563EB] w-8" : "bg-gray-300"
                 }`}
               />
             ))}
