@@ -1,0 +1,482 @@
+{
+  "name": "SlideRx Stage 2 - Final Presentation Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage2",
+        "options": {}
+      },
+      "id": "2a018260-d7be-4b77-b532-a8b565fe900d",
+      "name": "Webhook Trigger Stage 2",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        -32
+      ],
+      "webhookId": "sliderx-stage2"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse incoming API payload with full context\nconst body = $input.item.json.body;\n\n// Extract all required data\nconst projectId = body.projectId;\nconst userId = body.userId;\nconst s3Key = body.s3Key;\nconst projectBrief = body.projectBrief || {};\nconst summary = body.summary || {};\nconst reviewAndRefine = body.reviewAndRefine || [];\n\n// Extract user answers from reviewAndRefine with validation\nlet targetAudience = '';\nlet coreMessage = '';\nlet businessGoal = '';\n\nif (Array.isArray(reviewAndRefine)) {\n  const targetAudQ = reviewAndRefine.find(q => q.id === 'targetAudience');\n  const coreMessageQ = reviewAndRefine.find(q => q.id === 'coreMessage');\n  const businessGoalQ = reviewAndRefine.find(q => q.id === 'businessGoal');\n  \n  targetAudience = targetAudQ?.userAnswer || '';\n  coreMessage = coreMessageQ?.userAnswer || '';\n  businessGoal = businessGoalQ?.userAnswer || '';\n}\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Key,\n    projectBrief,\n    summary,\n    reviewAndRefine: {\n      targetAudience,\n      coreMessage,\n      businessGoal\n    },\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "2e0e45f1-77fa-42c1-8f32-55f141ef1f17",
+      "name": "Parse API Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare comprehensive prompt for AI to generate 3-slide presentation (IMPROVED VERSION)\nconst data = $input.item.json;\n\n// Build rich context from Stage 1 analysis\nconst slideSummaries = data.summary.slides\n  .map(s => {\n    let summary = `Slide ${s.index}: ${s.title}`;\n    if (s.textContent) summary += `\\nContent: ${s.textContent.join(', ')}`;\n    if (s.bullets) summary += `\\nBullets: ${s.bullets.join(', ')}`;\n    if (s.visualDescription) summary += `\\nVisuals: ${s.visualDescription}`;\n    if (s.extractedNumbers) summary += `\\nData: ${JSON.stringify(s.extractedNumbers)}`;\n    if (s.category) summary += `\\nCategory: ${s.category}`;\n    return summary;\n  })\n  .join('\\n\\n');\n\n// Extract metadata and narrative if available\nconst metadata = data.summary.presentationMetadata || {};\nconst narrative = data.summary.narrative || {};\nconst keyMetrics = data.summary.keyMetrics || {};\n\n// Detect audience-specific tone\nconst audienceMap = {\n  'Investors': 'confident, data-driven, emphasizing ROI and market opportunity',\n  'Potential customers': 'benefit-focused, clear value proposition, problem-solution oriented',\n  'Internal leadership': 'strategic, aligned with company goals, action-oriented',\n  'Strategic partners': 'collaborative, mutual benefit, ecosystem value'\n};\n\nconst tone = audienceMap[data.reviewAndRefine.targetAudience] || 'professional and clear';\n\nconst prompt = `You are an expert presentation designer specializing in creating compelling executive summaries for ${data.reviewAndRefine.targetAudience}.\n\n**YOUR MISSION:**\nTransform the full presentation into a powerful 3-slide executive summary that delivers maximum impact. Each slide must be visually striking and contain exactly ONE sentence that tells the story.\n\n═══════════════════════════════════════════════════════\n📊 ORIGINAL PRESENTATION ANALYSIS\n═══════════════════════════════════════════════════════\n\n${slideSummaries}\n\n${metadata.totalSlides ? `\\n**Presentation Type:** ${metadata.businessType || 'Unknown'}\\n**Stage:** ${metadata.stage || 'Unknown'}\\n**Quality Score:** ${metadata.overallQuality || 'N/A'}/10\\n` : ''}\n\n${narrative.problem ? `\\n**Problem Narrative:** ${narrative.problem}` : ''}\n${narrative.solution ? `**Solution Narrative:** ${narrative.solution}` : ''}\n${narrative.traction ? `**Traction Narrative:** ${narrative.traction}` : ''}\n${narrative.ask ? `**Ask Narrative:** ${narrative.ask}` : ''}\n\n${Object.keys(keyMetrics).length > 0 ? `\\n**Key Metrics Extracted:**\\n${Object.entries(keyMetrics).map(([k, v]) => `- ${k}: ${v}`).join('\\n')}` : ''}\n\n═══════════════════════════════════════════════════════\n🎯 BUSINESS CONTEXT\n═══════════════════════════════════════════════════════\n\nIndustry: ${data.projectBrief.industry || 'Not specified'}\nProblem Being Solved: ${data.projectBrief.problemSolved || 'Not specified'}\nSuccess Metric: ${data.projectBrief.successMetric || 'Not specified'}\nProject Phase: ${data.projectBrief.projectPhase || 'Not specified'}\nKey Metrics: ${data.projectBrief.keyMetrics || 'Not specified'}\n\n═══════════════════════════════════════════════════════\n👤 USER DIRECTION (CRITICAL - USE THIS)\n═══════════════════════════════════════════════════════\n\nTarget Audience: ${data.reviewAndRefine.targetAudience}\nCore Message: \"${data.reviewAndRefine.coreMessage}\"\nBusiness Goal: ${data.reviewAndRefine.businessGoal}\n\nTone: ${tone}\n\n═══════════════════════════════════════════════════════\n📝 YOUR TASK: CREATE 3 SLIDES\n═══════════════════════════════════════════════════════\n\n**SLIDE 1: THE PROBLEM**\nPurpose: Hook the audience with a compelling problem statement\nRequirements:\n- Title: Exactly \"THE PROBLEM\"\n- Visual: Describe a SPECIFIC visual element that illustrates the problem\n  * Use concrete imagery: charts with actual trend lines, specific icons, data visualizations\n  * Include colors, shapes, and composition details\n  * Example: \"Declining bar chart showing 40% drop, red downward arrow, frustrated user icon\"\n  * NOT generic: \"Chart showing decline\"\n- Sentence: ONE powerful sentence (10-20 words) that captures the problem urgency\n  * Must resonate with ${data.reviewAndRefine.targetAudience}\n  * Include a number or metric if available\n  * Make it memorable and quotable\n\n**SLIDE 2: THE SOLUTION**\nPurpose: Present your solution as the clear answer to the problem\nRequirements:\n- Title: Exactly \"THE SOLUTION\"\n- Visual: Describe a SPECIFIC visual that demonstrates the solution\n  * Show transformation: before/after, process flow, product interface\n  * Use positive colors (green, blue), upward trends, success indicators\n  * Example: \"Product dashboard screenshot showing 3x growth metric in green, upward arrow, clean modern UI\"\n- Sentence: ONE powerful sentence (10-20 words) that captures your unique value\n  * Focus on the transformation or benefit\n  * Use active, confident language\n  * Differentiate from competitors\n\n**SLIDE 3: THE ASK**\nPurpose: Clear call-to-action aligned with business goal\nRequirements:\n- Title: Exactly \"THE ASK\"\n- Visual: Describe a SPECIFIC visual that supports the ask\n  * For fundraising: Use of funds chart, milestone timeline, growth projection\n  * For sales: ROI calculator, implementation timeline, success metrics\n  * For partnerships: Ecosystem diagram, mutual benefit visual, integration flow\n  * Example: \"Pie chart: 60% Product Development, 30% Go-to-Market, 10% Operations with 18-month runway timeline\"\n- Sentence: ONE powerful sentence (10-20 words) stating exactly what you want\n  * Be specific with numbers and timeframes\n  * Make it actionable and achievable\n  * Create urgency or compelling reason to act now\n\n═══════════════════════════════════════════════════════\n✅ QUALITY REQUIREMENTS\n═══════════════════════════════════════════════════════\n\n1. **Narrative Flow**: The 3 slides must tell a coherent story\n   - Problem → Solution → Ask should feel connected\n   - Use the core message: \"${data.reviewAndRefine.coreMessage}\"\n\n2. **Sentence Power Rules**:\n   - Length: 10-20 words maximum\n   - Structure: Subject + Verb + Impact\n   - Include numbers when possible (e.g., \"$50M market\", \"3x faster\", \"500 customers\")\n   - Avoid jargon, use clear language\n   - Make each sentence quotable\n\n3. **Visual Specificity**:\n   - Every visual must be detailed enough for a designer to create\n   - Include colors, specific chart types, icons, layouts\n   - Align visuals with brand/industry aesthetics\n   - Ensure visuals support the sentence, not repeat it\n\n4. **Audience Alignment**:\n   - Every word must resonate with ${data.reviewAndRefine.targetAudience}\n   - Use terminology and metrics they care about\n   - Tone: ${tone}\n\n═══════════════════════════════════════════════════════\n📤 OUTPUT FORMAT\n═══════════════════════════════════════════════════════\n\nReturn ONLY valid JSON. No markdown, no explanations, no extra text.\n\n{\n  \"slide1\": {\n    \"title\": \"THE PROBLEM\",\n    \"visual\": \"Specific detailed visual description with colors, elements, and composition\",\n    \"sentence\": \"One powerful sentence capturing the problem (10-20 words)\"\n  },\n  \"slide2\": {\n    \"title\": \"THE SOLUTION\",\n    \"visual\": \"Specific detailed visual description with colors, elements, and composition\",\n    \"sentence\": \"One powerful sentence capturing the solution (10-20 words)\"\n  },\n  \"slide3\": {\n    \"title\": \"THE ASK\",\n    \"visual\": \"Specific detailed visual description with colors, elements, and composition\",\n    \"sentence\": \"One powerful sentence stating the ask (10-20 words)\"\n  }\n}`;\n\nreturn {\n  json: {\n    projectId: data.projectId,\n    userId: data.userId,\n    prompt,\n    context: data\n  }\n};"
+      },
+      "id": "97404f9d-e9e3-4650-95e0-98feda8e64aa",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.openRouterApiKey}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx N8N Workflow"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'anthropic/claude-sonnet-4.5',\n  max_tokens: 8000,\n  temperature: 0.3,\n  top_p: 0.95,\n  messages: [{\n    role: 'system',\n    content: 'You are an expert executive presentation designer. You create concise, impactful slide content that tells compelling stories. You always return valid JSON and follow instructions precisely.'\n  }, {\n    role: 'user',\n    content: $json.prompt\n  }]\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "333f54cc-0a63-45d1-b6ed-6317a1bc3881",
+      "name": "AI Generate 3 Slides",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        -256,
+        -32
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "Fb6D2B2ICq74Z4Fo",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse AI response and format for PDF generation\nconst aiResponse = $input.item.json;\nconst projectId = $node['Parse API Payload'].json.projectId;\n\nlet slides;\ntry {\n  const content = aiResponse.choices[0].message.content;\n  // Extract JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    slides = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in AI response');\n  }\n  \n  // Validate structure\n  if (!slides.slide1 || !slides.slide2 || !slides.slide3) {\n    throw new Error('Missing slides in AI response');\n  }\n  \n  // Ensure titles are correct\n  slides.slide1.title = 'THE PROBLEM';\n  slides.slide2.title = 'THE SOLUTION';\n  slides.slide3.title = 'THE ASK';\n  \n} catch (error) {\n  // Fallback slides if parsing fails\n  console.error('AI parsing error:', error.message);\n  slides = {\n    slide1: {\n      title: 'THE PROBLEM',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    },\n    slide2: {\n      title: 'THE SOLUTION',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    },\n    slide3: {\n      title: 'THE ASK',\n      visual: 'Error generating content',\n      sentence: 'Please retry the generation process.'\n    }\n  };\n}\n\nreturn {\n  json: {\n    projectId,\n    slide1: slides.slide1,\n    slide2: slides.slide2,\n    slide3: slides.slide3\n  }\n};"
+      },
+      "id": "dc34e55d-0d8f-4323-b5ad-02174cddbe1c",
+      "name": "Format Slides for PDF",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://pdf-services:8000/generate-pdf",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({\n  projectId: $json.projectId,\n  slide1: $json.slide1,\n  slide2: $json.slide2,\n  slide3: $json.slide3\n})}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "1d6f1e0d-b27e-4bd8-909a-2c7349b6ca1c",
+      "name": "PDF Service - Generate PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        160,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare S3 upload parameters\nconst projectId = $node['Parse API Payload'].json.projectId;\nconst userId = $node['Parse API Payload'].json.userId;\n\n// S3 key format: outputs/{userId}/{projectId}/result.pdf\nconst s3Key = `outputs/${userId}/${projectId}/result.pdf`;\nconst s3Bucket = 'sliderx-outputs-dev';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Bucket,\n    s3Key\n  },\n  binary: {\n    data: $input.item.binary.data\n  }\n};"
+      },
+      "id": "2399c46b-9724-4816-8ac0-57cab8ec9c87",
+      "name": "Prepare S3 Upload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "={{$json.s3Bucket}}",
+        "fileName": "={{ $json.s3Key }}",
+        "additionalFields": {}
+      },
+      "id": "3f3c3933-9dee-4480-9e55-b0bc53339e72",
+      "name": "S3 Upload Result PDF",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -32
+      ],
+      "credentials": {
+        "aws": {
+          "id": "b908eUeFHvhuq0qo",
+          "name": "AWS S3 SlideRx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, projectId: $node['Parse API Payload'].json.projectId, s3Key: $json.s3Key, message: 'Stage 2 completed - PDF uploaded to S3', status: 'ready' } }}",
+        "options": {}
+      },
+      "id": "f3a62e7e-1478-4dd8-a0ad-fb8cc05d86b7",
+      "name": "Webhook Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "db3f0848-b329-4784-bc4c-cfaf23b5dcaa",
+      "name": "Check API Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        368
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "c9c64717-9020-4549-9525-a49473096d94",
+      "name": "Check AI Generation Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        176
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "fae886bc-17e3-4867-bc73-8defdf01ab83",
+      "name": "Check PDF Generation Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        384,
+        160
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "9fd77d32-1e9e-4f27-a7b6-21fc90e59d2d",
+      "name": "Check S3 Upload Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        656,
+        336
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log error and format error response\nconst errorNode = $input.item.json;\nconst projectId = $node['Parse API Payload']?.json?.projectId || 'unknown';\n\nconst errorMessage = errorNode.error?.message || errorNode.message || 'Unknown error';\nconst errorStep = $node.name;\n\nconsole.error(`Stage 2 Error at ${errorStep}:`, errorMessage);\n\nreturn {\n  json: {\n    success: false,\n    projectId,\n    error: errorMessage,\n    failedAt: errorStep,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "4888a2b8-d2cd-4870-a190-adf5b8ad1b67",
+      "name": "Handle Stage 2 Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "a7610e91-2390-4189-9910-8d0eac1d451c",
+      "name": "Webhook Response - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        304,
+        336
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Parse API Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse API Payload": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Prompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check API Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Generate 3 Slides",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate 3 Slides": {
+      "main": [
+        [
+          {
+            "node": "Format Slides for PDF",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check AI Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slides for PDF": {
+      "main": [
+        [
+          {
+            "node": "PDF Service - Generate PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF Service - Generate PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare S3 Upload",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check PDF Generation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare S3 Upload": {
+      "main": [
+        [
+          {
+            "node": "S3 Upload Result PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Upload Result PDF": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check S3 Upload Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check AI Generation Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check PDF Generation Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check S3 Upload Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Stage 2 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Stage 2 Error": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "434d996d-0a1a-4b62-9ed6-231e4f3c6310",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "999de167917feeb81ee5b463e3f38b72ef0d971ddce84a6c8c7b9244ef43af93"
+  },
+  "id": "OaoFNZqV0G03T5Z4",
+  "tags": []
+}
