@@ -124,7 +124,11 @@ yarn.lock
 # ============================================
 # Frontend Build & AWS Amplify
 # ============================================
-frontend/amplify/
+frontend/amplify/team-provider-info.json
+frontend/amplify/.config/local-*
+frontend/amplify/mock-data
+frontend/amplify/mock-api-resources
+frontend/amplify/#current-cloud-backend
 
 # ============================================
 # Testing & Coverage
