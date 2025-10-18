@@ -117,8 +117,14 @@ docker-compose.override.yml
 # Node Modules (if any JS tooling added later)
 # ============================================
 node_modules/
+frontend/node_modules/
 package-lock.json
 yarn.lock
+
+# ============================================
+# Frontend Build & AWS Amplify
+# ============================================
+frontend/amplify/
 
 # ============================================
 # Testing & Coverage
