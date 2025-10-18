@@ -11,6 +11,7 @@ SlideRx N8N is a workflow orchestration system that processes presentation PDFs 
 ### Two-Stage Processing Flow
 
 **Stage 1 - Initial Processing:**
+
 1. AWS Lambda triggers N8N webhook after S3 upload
 2. N8N downloads PDF from S3 and extracts text via PDF microservice
 3. AI analyzes presentation + business context → returns per-slide summary + clarifying questions
@@ -18,6 +19,7 @@ SlideRx N8N is a workflow orchestration system that processes presentation PDFs 
 5. Frontend displays summary and questions to user
 
 **Stage 2 - Final Generation:**
+
 1. User submits answers → API triggers N8N webhook with full context
 2. AI generates final 3-slide presentation (Problem/Solution/Ask)
 3. N8N generates PDF via microservice, uploads to S3
@@ -26,17 +28,21 @@ SlideRx N8N is a workflow orchestration system that processes presentation PDFs 
 
 ### Components
 
+- **Frontend**: React 18.3 + Vite 5.1 + Tailwind CSS (MVP with mock data)
+- **AWS Backend**: Lambda handler (`docs/AWS/handler.mjs`) + API Gateway + DynamoDB + S3 + Cognito
 - **N8N**: Workflow engine running in Docker, accessible locally and via ngrok
-- **PDF Services**: FastAPI microservice (`pdf_services.py`) for PDF extraction and generation
-- **Docker Compose**: Orchestrates both services on shared network
+- **PDF Services**: FastAPI microservice (`pdf_services.py`) for PDF extraction and generation (v2.0 with visual generation)
+- **Docker Compose**: Orchestrates N8N and PDF services on shared network
 - **ngrok**: Exposes N8N webhooks publicly for AWS Lambda integration
 
 ### Service Communication
 
+- Frontend → AWS API Gateway: HTTPS REST calls (currently mock data)
+- AWS Lambda → N8N: Public ngrok URL webhooks (Stage 1 & 2 triggers)
+- N8N → AWS API Gateway: HTTPS POST (status updates to Lambda handler)
 - N8N → PDF Services: `http://pdf-services:8000` (Docker network)
-- N8N → AWS API: External HTTPS calls
-- N8N → OpenRouter AI: External HTTPS calls
-- AWS Lambda → N8N: Public ngrok URL webhooks
+- N8N → OpenRouter AI: External HTTPS calls (Claude Sonnet 4.5)
+- N8N → AWS S3: Download/upload PDFs (via AWS SDK)
 
 ## Common Commands
 
@@ -114,12 +120,14 @@ docker exec sliderx-n8n printenv | grep N8N_
 ### Webhook URLs (for AWS Lambda integration)
 
 After starting ngrok, share these URLs with backend team:
+
 - Stage 1: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage1`
 - Stage 2: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage2`
 
 ### Required N8N Credentials
 
 1. **AWS S3 Credentials** (named "AWS S3 SlideRx")
+
    - Access Key ID, Secret Access Key, Region: eu-central-1
 
 2. **OpenRouter API** (named "OpenRouter API")
@@ -130,10 +138,12 @@ After starting ngrok, share these URLs with backend team:
 ### Importing Workflows
 
 Workflows are defined in:
+
 - `plan/n8n_workflow_stage1.json` - Initial processing workflow
 - `plan/n8n_workflow_stage2.json` - Final generation workflow
 
 After importing, update credential references in:
+
 - AWS S3 nodes (Download/Upload operations)
 - OpenRouter API calls (HTTP Request nodes with AI calls)
 
@@ -156,7 +166,25 @@ Both services run on the `sliderx-network` Docker network, allowing N8N to acces
 
 ## AWS Integration Contracts
 
-### Stage 1 Input (from Lambda)
+### AWS Lambda Handler
+
+The backend API is implemented at `docs/AWS/handler.mjs` (191 lines, Node.js 20).
+
+**Endpoint:** `PUT/POST /projects/{projectId}/review`
+
+**Environment Variables:**
+
+- `TABLE_NAME` - DynamoDB table name
+- `N8N_PHASE2_URL` - Production N8N Stage 2 webhook URL
+- `N8N_PHASE2_URL_TEST` - Test N8N Stage 2 webhook URL
+
+**Authentication:** AWS Cognito or `X-User-Id` header
+
+**Allowed Status Values:**
+`uploading`, `processing`, `action needed`, `refining`, `ready`, `complete`, `done`, `failed`, `retry`, `ready for download`
+
+### Stage 1 Input (from Lambda to N8N)
+
 ```json
 {
   "projectId": "uuid",
@@ -171,20 +199,149 @@ Both services run on the `sliderx-network` Docker network, allowing N8N to acces
 }
 ```
 
-### Stage 1 Output (to API Gateway)
-POST to `/projects/{projectId}/review` with summary, reviewAndRefine questions, status: `needs_review`
+### Stage 1 Output (N8N to API Gateway Lambda)
 
-### Stage 2 Input (from API)
-Includes projectBrief + reviewAndRefine + summary + userAnswers
+POST to `/projects/{projectId}/review` with:
 
-### Stage 2 Output (to API Gateway)
-POST to `/projects/{projectId}/complete` with downloadUrl, slides, status: `ready`
+```json
+{
+  "reviewAndRefine": [
+    { "id": "q1", "type": "text", "label": "Question text..." }
+  ],
+  "status": "action needed"
+}
+```
+
+Lambda stores in DynamoDB and returns `200 OK`.
+
+### Stage 2 Input (from Lambda to N8N)
+
+When user submits answers, Lambda handler:
+
+1. Updates DynamoDB with answers
+2. Fetches full project data from DynamoDB
+3. Forwards entire project object to `N8N_PHASE2_URL`
+
+Includes: projectBrief + reviewAndRefine + summary + userAnswers + all metadata
+
+### Stage 2 Output (N8N to API Gateway Lambda)
+
+POST to `/projects/{projectId}/review` with:
+
+```json
+{
+  "status": "ready",
+  "downloadUrl": "https://s3.../output.pdf",
+  "slides": {
+    "slide1": {...},
+    "slide2": {...},
+    "slide3": {...}
+  }
+}
+```
 
 ## File Structure
 
 - `docker-compose.yml` - Service orchestration
-- `pdf_services.py` - FastAPI PDF microservice
+- `pdf_services.py` - FastAPI PDF microservice (Enhanced v2.0 with visual generation)
+- `pdf_services.py.backup` - Backup of original text-only version
 - `ngrok_setup.sh` - ngrok installation/configuration script
+- `frontend/` - React 18.3 + Vite 5.1 UI (6 components, mock data)
+- `docs/AWS/handler.mjs` - AWS Lambda API Gateway handler (Node.js 20)
 - `n8n-data/` - N8N persistent data (workflows, credentials, database)
 - `n8n-logs/` - N8N log files
-- `plan/` - Project documentation and workflow definitions
+- `workflows/` - Exported N8N workflow JSON files
+  - `SlideRx Stage 1 - PDF Extraction & Review Questions.json`
+  - `SlideRx Stage 2 - Final Presentation Generation.json`
+- `tools/` - Development utilities (S3 browser, OpenRouter node fixer)
+- `prd/` - Product Requirements Documentation
+- `content/` - Guides & resources
+
+## PDF Services Enhanced Features (v2.0)
+
+The PDF generation service has been upgraded to interpret AI visual descriptions and generate actual graphics:
+
+### Visual Generation Capabilities
+
+**Automatic Visual Interpretation:**
+
+- Analyzes AI-generated visual descriptions
+- Detects keywords (chart, flow, comparison, icon, etc.)
+- Generates appropriate graphics based on context
+
+**Supported Visual Types:**
+
+1. **Charts & Graphs**
+
+   - Bar charts (growth/decline patterns)
+   - Pie charts (3-segment allocation)
+   - Line graphs (trajectory/trend visualization)
+   - Automatically styled with axis lines and data points
+
+2. **Flow Diagrams**
+
+   - 3-step process flows with arrows
+   - Labeled boxes (e.g., "40 slides → SlideRx AI → 3 slides")
+   - Smart label detection from description
+
+3. **Comparisons**
+
+   - Split-screen before/after layouts
+   - Red "X" for problems, green checkmark for solutions
+   - Contrasting color schemes
+
+4. **Icons**
+   - Clock (time/urgency)
+   - Rocket/arrow (growth/upward trajectory)
+   - Person/user (professional/people)
+   - Generic document icons
+
+**Color-Coded by Slide Type:**
+
+- **Problem slides**: Red/pink tones (#EF4444)
+- **Solution slides**: Green tones (#10B981)
+- **Ask slides**: Blue tones (#2563EB)
+
+**Enhanced Design:**
+
+- Professional header bars with white text
+- Color-coded visual backgrounds
+- Better typography with proper text wrapping
+- SlideRx branding footer
+- Slide numbering (1 of 3, 2 of 3, 3 of 3)
+
+### Testing Visuals
+
+```bash
+# Test with different visual types
+curl -X POST http://localhost:8000/generate-pdf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectId": "test-visuals",
+    "slide1": {
+      "title": "THE PROBLEM",
+      "visual": "Bar chart showing 40% revenue decline over 3 quarters",
+      "sentence": "Revenue dropped 40% while costs remained flat."
+    },
+    "slide2": {
+      "title": "THE SOLUTION",
+      "visual": "Flow diagram from problem to SlideRx AI to solution",
+      "sentence": "Our AI automates the entire process in seconds."
+    },
+    "slide3": {
+      "title": "THE ASK",
+      "visual": "Pie chart showing 60% Product, 30% Marketing, 10% Operations with rocket trajectory",
+      "sentence": "We need $2M to scale to 10,000 customers."
+    }
+  }' --output test-output.pdf
+```
+
+### Future Enhancements (Phase 2)
+
+Potential upgrades for more advanced visual generation:
+
+1. **Matplotlib Integration**: Generate actual data-driven charts from extracted metrics
+2. **Image Generation APIs**: DALL-E/Stable Diffusion for custom illustrations
+3. **SVG Support**: Vector graphics for scalable visuals
+4. **Template System**: Pre-designed visual templates by industry
+5. **Custom Branding**: Logo upload and color scheme customization

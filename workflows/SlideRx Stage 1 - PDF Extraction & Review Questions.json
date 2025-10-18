@@ -1,0 +1,439 @@
+{
+  "name": "SlideRx Stage 1 - PDF Extraction & Review Questions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sliderx-stage1",
+        "options": {}
+      },
+      "id": "31261d7b-64e3-4e15-8c36-ba54314bde3d",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        16
+      ],
+      "webhookId": "sliderx-stage1"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse incoming Lambda payload\nconst body = $input.item.json.body;\n\n// Extract parameters\nconst projectId = body.projectId;\nconst s3Bucket = body.s3Bucket || 'sliderx-uploads-dev';\nconst s3Key = body.fileKey;  // Victor's update: use fileKey instead of s3Key\nconst projectBrief = body.projectBrief;\n\n// Extract userId from s3Key path: uploads/{userId}/{projectId}/...\nconst pathParts = s3Key.split('/');\nconst userId = pathParts[1];\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    s3Bucket,\n    s3Key,\n    projectBrief,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "93fb4aad-e2bd-482f-af05-eaa43fdd460c",
+      "name": "Parse Lambda Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "bucketName": "={{$json.s3Bucket}}",
+        "fileKey": "={{$json.s3Key}}"
+      },
+      "id": "92860374-75fb-4f4a-9cf2-c8257a3339e3",
+      "name": "S3 Download PDF",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        16
+      ],
+      "credentials": {
+        "aws": {
+          "id": "b908eUeFHvhuq0qo",
+          "name": "AWS S3 SlideRx"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Convert PDF binary to base64 for Claude API with Vision\nconst projectBrief = $node['Parse Lambda Payload'].json.projectBrief;\nconst projectId = $node['Parse Lambda Payload'].json.projectId;\nconst userId = $node['Parse Lambda Payload'].json.userId;\n\n// Get the binary data (PDF file from S3)\nconst binaryPropertyName = Object.keys($input.item.binary)[0];\nconst binaryData = $input.item.binary[binaryPropertyName];\n\n// Convert binary buffer to base64\n// N8N stores binary as Buffer, need to convert to base64 string\nlet base64Pdf;\nif (binaryData.data) {\n  // If data property exists, use it\n  base64Pdf = binaryData.data;\n} else if (Buffer.isBuffer(binaryData)) {\n  // If it's a Buffer directly, convert to base64\n  base64Pdf = binaryData.toString('base64');\n} else {\n  // Fallback: try to get from the binary object itself\n  const buffer = await this.helpers.getBinaryDataBuffer(0, binaryPropertyName);\n  base64Pdf = buffer.toString('base64');\n}\n\nconst mimeType = binaryData.mimeType || 'application/pdf';\nconst fileName = binaryData.fileName || 'presentation.pdf';\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    projectBrief,\n    pdfBase64: base64Pdf,\n    mimeType: mimeType,\n    fileName: fileName\n  }\n};"
+      },
+      "id": "a762bbad-a221-4fbf-b306-7d5f44643465",
+      "name": "Convert PDF to Base64",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Prepare AI API request with PDF for OpenRouter (IMPROVED VERSION)\nconst inputData = $input.item.json;\nconst pdfBase64 = inputData.pdfBase64;\nconst projectBrief = inputData.projectBrief;\nconst projectId = inputData.projectId;\nconst userId = inputData.userId;\nconst fileName = inputData.fileName || 'presentation.pdf';\n\n// Debug: Log data presence\nconsole.log('DEBUG - Prepare AI Request (OpenRouter Format):');\nconsole.log('- pdfBase64 length:', pdfBase64 ? pdfBase64.length : 'MISSING');\nconsole.log('- pdfBase64 start:', pdfBase64 ? pdfBase64.substring(0, 50) : 'MISSING');\nconsole.log('- fileName:', fileName);\nconsole.log('- projectId:', projectId);\nconsole.log('- userId:', userId);\n\nif (!pdfBase64) {\n  throw new Error('pdfBase64 is missing from input data');\n}\n\n// OpenRouter requires Data URL format: data:application/pdf;base64,<base64-data>\nconst pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;\n\n// Build improved request body with system prompt and enhanced user prompt\nconst requestBody = {\n  model: \"anthropic/claude-sonnet-4.5\",\n  max_tokens: 8000,\n  temperature: 0.2,\n  messages: [\n    {\n      role: \"system\",\n      content: `You are an expert business presentation analyst specializing in venture capital pitches, sales decks, and executive presentations. Your role is to:\n\n1. Extract every piece of meaningful information from presentations\n2. Identify the core business narrative (Problem → Solution → Ask)\n3. Recognize key metrics that investors/stakeholders care about\n4. Assess presentation quality and identify gaps\n5. Return structured, machine-readable JSON output\n\nYou have deep expertise in:\n- Startup pitches (pre-seed through Series C)\n- Sales and marketing presentations\n- Product launches and demos\n- Board and executive updates\n\nAlways prioritize:\n- Quantitative data over qualitative statements\n- Visual information (charts/graphs contain critical metrics)\n- Business model clarity\n- Traction and validation signals`\n    },\n    {\n      role: \"user\",\n      content: [\n        {\n          type: \"file\",\n          file: {\n            filename: fileName,\n            file_data: pdfDataUrl\n          }\n        },\n        {\n          type: \"text\",\n          text: `Analyze this business presentation comprehensively to prepare it for condensation into a 3-slide executive summary.\n\n**Context from user:**\nBusiness Purpose: ${projectBrief.businessPurpose || 'Not specified'}\nProject Phase: ${projectBrief.projectPhase || 'Not specified'}\nIndustry: ${projectBrief.industry || 'Not specified'}\nProblem Solved: ${projectBrief.problemSolved || 'Not specified'}\nKey Metrics: ${projectBrief.keyMetrics || 'Not specified'}\nCurrent Blockers: ${projectBrief.currentBlockers || 'Not specified'}\n\n**YOUR MISSION:**\nExtract all content from the presentation and identify which slides/content best fit into these 3 categories:\n1. **THE PROBLEM** - Market gap, pain points, opportunity size\n2. **THE SOLUTION** - Product/service, competitive advantage, traction\n3. **THE ASK** - Funding needs, partnership goals, next steps\n\n**ANALYSIS REQUIREMENTS:**\n\nFor each slide, extract:\n- Complete text content (titles, bullets, body text)\n- Visual elements with specific numbers (charts, graphs, data visualizations)\n- Which category it belongs to: problem/solution/ask/team/traction/other\n\nPay special attention to:\n- Market size numbers and TAM/SAM/SOM\n- Customer pain points and validation\n- Product features and differentiation\n- Traction metrics (revenue, users, growth rates)\n- Financial asks and use of funds\n- Team credentials and expertise\n- Competitive positioning\n- Business model and unit economics\n\n**OUTPUT FORMAT (strict JSON):**\n{\n  \"presentationMetadata\": {\n    \"totalSlides\": 0,\n    \"businessType\": \"B2B SaaS | B2C | Marketplace | Hardware | Other\",\n    \"stage\": \"idea | pre-seed | seed | series-a | growth | established\",\n    \"targetAudience\": \"investors | customers | partners | internal\",\n    \"overallQuality\": 0,\n    \"identifiedGoal\": \"fundraising | sales | product-launch | partnership | internal-update\"\n  },\n  \"narrative\": {\n    \"problem\": \"Concise description of the core problem being addressed\",\n    \"solution\": \"Concise description of the solution and value proposition\",\n    \"traction\": \"Concise description of validation and traction achieved\",\n    \"ask\": \"Concise description of what is being asked for\"\n  },\n  \"keyMetrics\": {\n    \"marketSize\": \"e.g., $50B TAM\",\n    \"revenue\": \"e.g., $500K ARR\",\n    \"growth\": \"e.g., 300% YoY\",\n    \"users\": \"e.g., 10K active users\",\n    \"fundingAsk\": \"e.g., $2M seed round\",\n    \"runway\": \"e.g., 18 months\"\n  },\n  \"slidesByCategory\": {\n    \"problem\": [1, 2],\n    \"solution\": [3, 4, 5],\n    \"traction\": [6, 7],\n    \"team\": [8],\n    \"ask\": [9, 10],\n    \"other\": [11, 12]\n  },\n  \"slides\": [\n    {\n      \"index\": 1,\n      \"title\": \"Exact slide title as shown\",\n      \"category\": \"problem|solution|ask|team|traction|other\",\n      \"textContent\": [\"Main point 1\", \"Main point 2\", \"Supporting detail\"],\n      \"visualDescription\": \"Bar chart with 3 bars showing revenue growth: 2022: $1M, 2023: $3M, 2024: $9M. Blue gradient background.\",\n      \"extractedNumbers\": {\n        \"revenue2022\": \"$1M\",\n        \"revenue2023\": \"$3M\",\n        \"revenue2024\": \"$9M\",\n        \"growth\": \"300%\"\n      },\n      \"importance\": 8,\n      \"usableForExecutiveSummary\": true\n    }\n  ]\n}\n\n**Return ONLY valid JSON. No markdown formatting, no additional text before or after.**`\n        }\n      ]\n    }\n  ]\n};\n\n// Debug: Log request structure\nconsole.log('- Request body model:', requestBody.model);\nconsole.log('- Temperature:', requestBody.temperature);\nconsole.log('- Max tokens:', requestBody.max_tokens);\nconsole.log('- Messages count:', requestBody.messages.length);\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    requestBody: requestBody\n  }\n};"
+      },
+      "id": "ddf4de27-ae00-45e2-806e-ebb0c8c6c746",
+      "name": "Prepare AI Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        48,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$credentials.openRouterApiKey}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://sliderx.app"
+            },
+            {
+              "name": "X-Title",
+              "value": "SlideRx N8N Workflow"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "cea6286c-214e-4b50-9715-416aa05a6825",
+      "name": "AI Analysis - OpenRouter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        240,
+        16
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "Fb6D2B2ICq74Z4Fo",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse AI response and format for API callback (UPDATED FOR NEW STRUCTURE)\nconst aiResponse = $input.item.json;\nconst userId = $node['Parse Lambda Payload'].json.userId;\nconst projectId = $node['Parse Lambda Payload'].json.projectId;\n\n// Extract summary from AI response\nlet summary;\ntry {\n  const content = aiResponse.choices[0].message.content;\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const fullData = JSON.parse(jsonMatch[0]);\n    if (fullData.slides) {\n      summary = fullData;\n    } else {\n      throw new Error('No slides array found in response');\n    }\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (error) {\n  console.error('AI parsing error:', error.message);\n  summary = {\n    presentationMetadata: { totalSlides: 0, overallQuality: 0 },\n    slides: [{\n      index: 1,\n      title: 'Summary Not Available',\n      textContent: ['AI analysis failed to parse', 'Please retry'],\n      category: 'other'\n    }]\n  };\n}\n\nconst reviewAndRefine = [\n  {\n    id: 'targetAudience',\n    type: 'select',\n    label: 'Who is this presentation primarily aimed at?',\n    options: ['Investors', 'Potential customers', 'Internal leadership', 'Strategic partners'],\n    required: true,\n    userAnswer: ''\n  },\n  {\n    id: 'coreMessage',\n    type: 'longText',\n    label: 'What is the key message or takeaway you want the audience to remember?',\n    required: true,\n    userAnswer: ''\n  },\n  {\n    id: 'businessGoal',\n    type: 'select',\n    label: 'What best describes your main business goal for this presentation?',\n    options: [\n      'Fundraising / attracting investors',\n      'Product launch or marketing',\n      'Internal alignment and strategy',\n      'Client acquisition or sales enablement'\n    ],\n    required: true,\n    userAnswer: ''\n  }\n];\n\nreturn {\n  json: {\n    projectId,\n    userId,\n    summary,\n    reviewAndRefine\n  }\n};"
+      },
+      "id": "9b7e2e26-723c-4495-ae2b-8ac1d72832f1",
+      "name": "Format API Callback",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        448,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://f9yntj41f4.execute-api.eu-central-1.amazonaws.com/dev/projects/{{$json.projectId}}/ai/callback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-user-id",
+              "value": "={{$json.userId}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({\n  userId: $json.userId,\n  summary: $json.summary,\n  reviewAndRefine: $json.reviewAndRefine\n})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "cd8941f9-e393-49ab-a314-d6147a1e5311",
+      "name": "POST to API Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        640,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, projectId: $node['Parse Lambda Payload'].json.projectId, message: 'Stage 1 completed successfully', status: 'needs_review' } }}",
+        "options": {}
+      },
+      "id": "666d114e-35a6-4116-ae14-87167d540bb2",
+      "name": "Webhook Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        848,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "5c8054b7-9ddf-4fee-ad0d-948139746696",
+      "name": "Check S3 Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        224
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "756b9ba8-8146-4b90-ab5e-bbb13ba491ab",
+      "name": "Check Extract Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        48,
+        224
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.error}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "a6e389f0-5e02-48b9-843b-af34b4f892d4",
+      "name": "Check AI Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        448,
+        224
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log error and format error response\nconst errorNode = $input.item.json;\nconst projectId = $node['Parse Lambda Payload']?.json?.projectId || 'unknown';\n\nconst errorMessage = errorNode.error?.message || errorNode.message || 'Unknown error';\nconst errorStep = $node.name;\n\nconsole.error(`Stage 1 Error at ${errorStep}:`, errorMessage);\n\nreturn {\n  json: {\n    success: false,\n    projectId,\n    error: errorMessage,\n    failedAt: errorStep,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "54fa53d5-a0bc-468a-89ce-28ffbd439170",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        240,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "0372f102-7e50-480c-9c35-409cdd7f7f6d",
+      "name": "Webhook Response - Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        448,
+        320
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Lambda Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Lambda Payload": {
+      "main": [
+        [
+          {
+            "node": "S3 Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S3 Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Convert PDF to Base64",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check S3 Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analysis - OpenRouter": {
+      "main": [
+        [
+          {
+            "node": "Format API Callback",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check AI Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format API Callback": {
+      "main": [
+        [
+          {
+            "node": "POST to API Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to API Callback": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check S3 Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Extract Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check AI Error": {
+      "main": [
+        [
+          {
+            "node": "Handle Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response - Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert PDF to Base64": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Request": {
+      "main": [
+        [
+          {
+            "node": "AI Analysis - OpenRouter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b0523ef6-8cf7-4ff2-8e95-ddbd1c3be4fa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "999de167917feeb81ee5b463e3f38b72ef0d971ddce84a6c8c7b9244ef43af93"
+  },
+  "id": "2uKxj5bPbNVuY98q",
+  "tags": []
+}
