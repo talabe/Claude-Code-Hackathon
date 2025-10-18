@@ -24,6 +24,16 @@
   * {
     @apply box-border;
   }
+
+  /* Prevent browsers from auto-adjusting text colors in dark mode */
+  /* This ensures dark text stays dark on light backgrounds */
+  .text-heading,
+  .text-neutral-dark,
+  .text-black,
+  h1, h2, h3, h4, h5, h6 {
+    -webkit-text-fill-color: inherit;
+    forced-color-adjust: none;
+  }
 }
 
 /* Custom utility classes */
