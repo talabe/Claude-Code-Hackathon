@@ -266,7 +266,7 @@ const Processing = () => {
   // Show error state if there's an error
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+      <div className="min-h-screen bg-background-light flex items-center justify-center">
         <div className="max-w-md mx-auto px-4">
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <svg
@@ -282,11 +282,11 @@ const Processing = () => {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
-            <p className="text-[#64748B] mb-6">{error}</p>
+            <h2 className="text-xl font-bold font-mono text-heading mb-2">Error</h2>
+            <p className="text-neutral-light font-sans mb-6">{error}</p>
             <button
               onClick={() => navigate("/upload")}
-              className="px-6 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-medium"
+              className="px-6 py-2 bg-primary text-black rounded-lg hover:bg-primaryDark transition-colors font-medium font-mono"
             >
               Back to Upload
             </button>
@@ -297,12 +297,12 @@ const Processing = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background-light">
       {/* Header - matches Upload page structure */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-border">
         <div className="max-w-[800px] mx-auto px-4 sm:px-8 py-4">
           <div className="flex items-center justify-center">
-            <h1 className="text-xl font-bold text-[#2563EB]">SlideRx</h1>
+            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
           </div>
         </div>
       </header>
@@ -313,7 +313,7 @@ const Processing = () => {
           {/* Loading Spinner */}
           <div className="mb-8">
             <svg
-              className="w-16 h-16 text-[#2563EB] animate-spin"
+              className="w-16 h-16 text-[#c7e565] animate-spin"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -335,11 +335,11 @@ const Processing = () => {
           </div>
 
           {/* Status Text */}
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold font-mono text-heading mb-2 text-center">
             AI is analyzing your slides
           </h2>
-          <p className="text-sm text-[#64748B] mb-12 text-center">
-            This can take up to 60 seconds
+          <p className="text-sm text-neutral-light font-sans mb-12 text-center">
+            This can take up to 90 seconds
           </p>
 
           {/* Rotating Content Box with Navigation */}
@@ -347,11 +347,11 @@ const Processing = () => {
             {/* Previous Button */}
             <button
               onClick={handlePrevious}
-              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full shadow-lg hover:shadow-xl hover:bg-[#F8FAFC] transition-all flex items-center justify-center group"
+              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-black rounded-full shadow-lg hover:shadow-xl hover:bg-gray-900 transition-all flex items-center justify-center group"
               aria-label="Previous content"
             >
               <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B] group-hover:text-[#2563EB] transition-colors"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-[#c7e565] transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -366,7 +366,7 @@ const Processing = () => {
             </button>
 
             {/* Content Box */}
-            <div className="flex-1 bg-white rounded-lg shadow-lg p-8 min-h-[200px] flex items-center justify-center">
+            <div className="flex-1 bg-black rounded-lg shadow-lg p-8 min-h-[200px] flex items-center justify-center border border-border">
               <div
                 className="transition-opacity duration-300 ease-in-out"
                 style={{ opacity: isVisible ? 1 : 0 }}
@@ -375,10 +375,10 @@ const Processing = () => {
                   <div className="flex items-start gap-3">
                     <span className="text-2xl flex-shrink-0">💬</span>
                     <div>
-                      <p className="text-sm font-semibold text-[#2563EB] mb-2">
+                      <p className="text-sm font-semibold font-mono text-[#c7e565] mb-2">
                         Presentation Wisdom:
                       </p>
-                      <p className="text-base sm:text-lg text-gray-800 italic leading-relaxed">
+                      <p className="text-base sm:text-lg text-white font-sans italic leading-relaxed">
                         {currentContent.text}
                       </p>
                     </div>
@@ -387,10 +387,10 @@ const Processing = () => {
                   <div className="flex items-start gap-3">
                     <span className="text-2xl flex-shrink-0">💡</span>
                     <div>
-                      <p className="text-sm font-semibold text-[#2563EB] mb-2">
+                      <p className="text-sm font-semibold font-mono text-[#c7e565] mb-2">
                         PowerPoint Pro Tip:
                       </p>
-                      <p className="text-base sm:text-lg text-gray-800 leading-relaxed">
+                      <p className="text-base sm:text-lg text-white font-sans leading-relaxed">
                         {currentContent.text}
                       </p>
                     </div>
@@ -402,11 +402,11 @@ const Processing = () => {
             {/* Next Button */}
             <button
               onClick={handleNext}
-              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full shadow-lg hover:shadow-xl hover:bg-[#F8FAFC] transition-all flex items-center justify-center group"
+              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-black rounded-full shadow-lg hover:shadow-xl hover:bg-gray-900 transition-all flex items-center justify-center group"
               aria-label="Next content"
             >
               <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B] group-hover:text-[#2563EB] transition-colors"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-[#c7e565] transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -427,7 +427,7 @@ const Processing = () => {
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                  i === contentIndex % 5 ? "bg-[#2563EB] w-8" : "bg-gray-300"
+                  i === contentIndex % 5 ? "bg-[#c7e565] w-8" : "bg-[#eaeaea]"
                 }`}
               />
             ))}

@@ -263,14 +263,14 @@ const Dashboard = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-background-light">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
+        <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold text-[#2563EB]">SlideRx</h1>
+            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
             <button
               onClick={handleLogout}
-              className="text-sm text-[#64748B] hover:text-[#EF4444] transition-colors font-medium"
+              className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
             >
               Logout
             </button>
@@ -282,7 +282,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <svg
-                className="w-12 h-12 text-[#2563EB] animate-spin mx-auto mb-4"
+                className="w-12 h-12 text-[#c7e565] animate-spin mx-auto mb-4"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -301,7 +301,7 @@ const Dashboard = () => {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <p className="text-[#64748B]">Loading your projects...</p>
+              <p className="text-neutral-light font-sans">Loading your projects...</p>
             </div>
           </div>
         </main>
@@ -312,14 +312,14 @@ const Dashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-background-light">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
+        <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold text-[#2563EB]">SlideRx</h1>
+            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
             <button
               onClick={handleLogout}
-              className="text-sm text-[#64748B] hover:text-[#EF4444] transition-colors font-medium"
+              className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
             >
               Logout
             </button>
@@ -344,11 +344,11 @@ const Dashboard = () => {
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
-                <p className="text-[#64748B] mb-6">{error}</p>
+                <h2 className="text-xl font-bold font-mono text-heading mb-2">Error</h2>
+                <p className="text-neutral-light font-sans mb-6">{error}</p>
                 <button
                   onClick={handleRetry}
-                  className="px-6 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-medium"
+                  className="px-6 py-2 bg-[#c7e565] text-black rounded-lg hover:bg-[#90BC00] transition-colors font-medium font-mono"
                 >
                   Retry
                 </button>
@@ -363,14 +363,14 @@ const Dashboard = () => {
   // Empty state
   if (projects.length === 0) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC]">
+      <div className="min-h-screen bg-background-light">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200">
+        <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold text-[#2563EB]">SlideRx</h1>
+            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
             <button
               onClick={handleLogout}
-              className="text-sm text-[#64748B] hover:text-[#EF4444] transition-colors font-medium"
+              className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
             >
               Logout
             </button>
@@ -382,7 +382,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="text-center">
               <svg
-                className="w-24 h-24 text-[#64748B] mx-auto mb-6"
+                className="w-24 h-24 text-neutral-light mx-auto mb-6"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -394,15 +394,15 @@ const Dashboard = () => {
                   d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
                 />
               </svg>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold font-mono text-heading mb-2">
                 No projects yet
               </h2>
-              <p className="text-[#64748B] mb-8">
+              <p className="text-neutral-light font-sans mb-8">
                 Upload your first presentation to get started
               </p>
               <button
                 onClick={handleNewProject}
-                className="px-8 py-3 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-semibold shadow-lg hover:shadow-xl"
+                className="px-8 py-3 bg-[#c7e565] text-black rounded-lg hover:bg-[#90BC00] transition-colors font-semibold font-mono shadow-lg hover:shadow-xl"
               >
                 Upload Presentation
               </button>
@@ -415,14 +415,14 @@ const Dashboard = () => {
 
   // Main dashboard with projects
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background-light">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-[#2563EB]">SlideRx</h1>
+          <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
           <button
             onClick={handleLogout}
-            className="text-sm text-[#64748B] hover:text-[#EF4444] transition-colors font-medium"
+            className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
           >
             Logout
           </button>
@@ -434,10 +434,10 @@ const Dashboard = () => {
         {/* Page Title Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl sm:text-4xl font-bold font-mono text-heading mb-2">
               My Projects
             </h2>
-            <p className="text-[#64748B]">
+            <p className="text-neutral-light font-sans">
               Manage your presentation transformations
               <span className="ml-2 text-sm font-medium">
                 • {projects.length} Project{projects.length === 1 ? "" : "s"}
@@ -446,7 +446,7 @@ const Dashboard = () => {
           </div>
           <button
             onClick={handleNewProject}
-            className="mt-4 sm:mt-0 px-6 py-3 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
+            className="mt-4 sm:mt-0 px-6 py-3 bg-[#c7e565] text-black rounded-lg hover:bg-[#90BC00] transition-colors font-semibold font-mono shadow-lg hover:shadow-xl flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -477,7 +477,7 @@ const Dashboard = () => {
             return (
               <article
                 key={project.projectId}
-                className="bg-white rounded-xl border border-gray-200 p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+                className="bg-white rounded-xl border border-border p-6 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
                 onClick={() => handleCardClick(project)}
                 onKeyDown={(e) => e.key === "Enter" && handleCardClick(project)}
                 tabIndex={0}
@@ -487,7 +487,7 @@ const Dashboard = () => {
                 {/* Status Badge */}
                 <div className="mb-4">
                   <span
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium font-sans ${
                       statusBadge.color
                     } ${statusBadge.animate ? "animate-pulse" : ""}`}
                     aria-label={`Status: ${statusBadge.text}`}
@@ -499,18 +499,18 @@ const Dashboard = () => {
 
                 {/* Project Name (Card Title) */}
                 <div className="mb-3">
-                  <h3 className="text-xl font-semibold text-[#1F2937] leading-snug line-clamp-2">
+                  <h3 className="text-xl font-semibold font-mono text-heading leading-snug line-clamp-2">
                     {displayName}
                   </h3>
                   {project.businessPurpose && (
-                    <p className="text-sm text-[#64748B] mt-1">
+                    <p className="text-sm text-neutral-light font-sans mt-1">
                       Presentation type: {project.businessPurpose}
                     </p>
                   )}
                 </div>
 
                 {/* Metadata */}
-                <div className="text-sm text-[#64748B] mb-4">
+                <div className="text-sm text-neutral-light font-sans mb-4">
                   <p>Created {formatRelativeTime(project.createdAt)}</p>
                   {project.projectName &&
                     project.projectName !== project.projectId && (
@@ -522,10 +522,10 @@ const Dashboard = () => {
 
                 {/* Action Button */}
                 <button
-                  className={`w-full py-2.5 rounded-lg font-medium transition-colors ${
+                  className={`w-full py-2.5 rounded-lg font-medium font-mono transition-colors ${
                     isUploading
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-[#2563EB] text-white hover:bg-[#1e40af]"
+                      : "bg-[#c7e565] text-black hover:bg-[#90BC00]"
                   }`}
                   disabled={isUploading}
                   onClick={(e) => {
@@ -538,7 +538,7 @@ const Dashboard = () => {
                 </button>
 
                 {/* ⚠️⚠️⚠️ TEMPORARY DEBUG - DELETE THIS BEFORE PRODUCTION ⚠️⚠️⚠️ */}
-                <p className="text-xs italic text-[#64748B] mt-2 text-center">
+                <p className="text-xs italic text-neutral-light font-sans mt-2 text-center">
                   Project ID: {project.projectId}
                   <br />
                   Status: {project.status}
@@ -559,7 +559,7 @@ const Dashboard = () => {
                 );
                 // TODO: Implement pagination when backend supports it
               }}
-              className="px-6 py-3 bg-white text-[#2563EB] border-2 border-[#2563EB] rounded-lg hover:bg-blue-50 transition-colors font-semibold"
+              className="px-6 py-3 bg-white text-black border-2 border-[#c7e565] rounded-lg hover:bg-[#f5f5f5] transition-colors font-semibold font-mono"
             >
               Load More Projects
             </button>
