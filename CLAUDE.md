@@ -265,7 +265,7 @@ The PDF generation service has been upgraded to interpret AI visual descriptions
 
 **Automatic Visual Interpretation:**
 
-- Analyzes AI-generated visual descriptions.
+- Analyzes AI-generated visual descriptions
 - Detects keywords (chart, flow, comparison, icon, etc.)
 - Generates appropriate graphics based on context
 
