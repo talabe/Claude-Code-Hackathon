@@ -11,6 +11,7 @@ SlideRx N8N is a workflow orchestration system that processes presentation PDFs 
 ### Two-Stage Processing Flow
 
 **Stage 1 - Initial Processing:**
+
 1. AWS Lambda triggers N8N webhook after S3 upload
 2. N8N downloads PDF from S3 and extracts text via PDF microservice
 3. AI analyzes presentation + business context → returns per-slide summary + clarifying questions
@@ -18,6 +19,7 @@ SlideRx N8N is a workflow orchestration system that processes presentation PDFs 
 5. Frontend displays summary and questions to user
 
 **Stage 2 - Final Generation:**
+
 1. User submits answers → API triggers N8N webhook with full context
 2. AI generates final 3-slide presentation (Problem/Solution/Ask)
 3. N8N generates PDF via microservice, uploads to S3
@@ -118,12 +120,14 @@ docker exec sliderx-n8n printenv | grep N8N_
 ### Webhook URLs (for AWS Lambda integration)
 
 After starting ngrok, share these URLs with backend team:
+
 - Stage 1: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage1`
 - Stage 2: `https://YOUR-NGROK-URL.ngrok-free.dev/webhook/sliderx-stage2`
 
 ### Required N8N Credentials
 
 1. **AWS S3 Credentials** (named "AWS S3 SlideRx")
+
    - Access Key ID, Secret Access Key, Region: eu-central-1
 
 2. **OpenRouter API** (named "OpenRouter API")
@@ -134,10 +138,12 @@ After starting ngrok, share these URLs with backend team:
 ### Importing Workflows
 
 Workflows are defined in:
+
 - `plan/n8n_workflow_stage1.json` - Initial processing workflow
 - `plan/n8n_workflow_stage2.json` - Final generation workflow
 
 After importing, update credential references in:
+
 - AWS S3 nodes (Download/Upload operations)
 - OpenRouter API calls (HTTP Request nodes with AI calls)
 
@@ -161,11 +167,13 @@ Both services run on the `sliderx-network` Docker network, allowing N8N to acces
 ## AWS Integration Contracts
 
 ### AWS Lambda Handler
+
 The backend API is implemented at `docs/AWS/handler.mjs` (191 lines, Node.js 20).
 
 **Endpoint:** `PUT/POST /projects/{projectId}/review`
 
 **Environment Variables:**
+
 - `TABLE_NAME` - DynamoDB table name
 - `N8N_PHASE2_URL` - Production N8N Stage 2 webhook URL
 - `N8N_PHASE2_URL_TEST` - Test N8N Stage 2 webhook URL
@@ -176,6 +184,7 @@ The backend API is implemented at `docs/AWS/handler.mjs` (191 lines, Node.js 20)
 `uploading`, `processing`, `action needed`, `refining`, `ready`, `complete`, `done`, `failed`, `retry`, `ready for download`
 
 ### Stage 1 Input (from Lambda to N8N)
+
 ```json
 {
   "projectId": "uuid",
@@ -191,11 +200,13 @@ The backend API is implemented at `docs/AWS/handler.mjs` (191 lines, Node.js 20)
 ```
 
 ### Stage 1 Output (N8N to API Gateway Lambda)
+
 POST to `/projects/{projectId}/review` with:
+
 ```json
 {
   "reviewAndRefine": [
-    {"id": "q1", "type": "text", "label": "Question text..."}
+    { "id": "q1", "type": "text", "label": "Question text..." }
   ],
   "status": "action needed"
 }
@@ -204,7 +215,9 @@ POST to `/projects/{projectId}/review` with:
 Lambda stores in DynamoDB and returns `200 OK`.
 
 ### Stage 2 Input (from Lambda to N8N)
+
 When user submits answers, Lambda handler:
+
 1. Updates DynamoDB with answers
 2. Fetches full project data from DynamoDB
 3. Forwards entire project object to `N8N_PHASE2_URL`
@@ -212,7 +225,9 @@ When user submits answers, Lambda handler:
 Includes: projectBrief + reviewAndRefine + summary + userAnswers + all metadata
 
 ### Stage 2 Output (N8N to API Gateway Lambda)
+
 POST to `/projects/{projectId}/review` with:
+
 ```json
 {
   "status": "ready",
@@ -249,24 +264,28 @@ The PDF generation service has been upgraded to interpret AI visual descriptions
 ### Visual Generation Capabilities
 
 **Automatic Visual Interpretation:**
-- Analyzes AI-generated visual descriptions
+
+- Analyzes AI-generated visual descriptions.
 - Detects keywords (chart, flow, comparison, icon, etc.)
 - Generates appropriate graphics based on context
 
 **Supported Visual Types:**
 
 1. **Charts & Graphs**
+
    - Bar charts (growth/decline patterns)
    - Pie charts (3-segment allocation)
    - Line graphs (trajectory/trend visualization)
    - Automatically styled with axis lines and data points
 
 2. **Flow Diagrams**
+
    - 3-step process flows with arrows
    - Labeled boxes (e.g., "40 slides → SlideRx AI → 3 slides")
    - Smart label detection from description
 
 3. **Comparisons**
+
    - Split-screen before/after layouts
    - Red "X" for problems, green checkmark for solutions
    - Contrasting color schemes
@@ -278,11 +297,13 @@ The PDF generation service has been upgraded to interpret AI visual descriptions
    - Generic document icons
 
 **Color-Coded by Slide Type:**
+
 - **Problem slides**: Red/pink tones (#EF4444)
 - **Solution slides**: Green tones (#10B981)
 - **Ask slides**: Blue tones (#2563EB)
 
 **Enhanced Design:**
+
 - Professional header bars with white text
 - Color-coded visual backgrounds
 - Better typography with proper text wrapping
