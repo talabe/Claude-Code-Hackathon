@@ -18,6 +18,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getCurrentUser } from "aws-amplify/auth";
+import logo from "../logo.jpg";
 
 // Content arrays - parsed from markdown files
 const CITATIONS = [
@@ -302,7 +303,7 @@ const Processing = () => {
       <header className="bg-white border-b border-border">
         <div className="max-w-[800px] mx-auto px-4 sm:px-8 py-4">
           <div className="flex items-center justify-center">
-            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+            <img src={logo} alt="SlideRx" className="h-8" />
           </div>
         </div>
       </header>

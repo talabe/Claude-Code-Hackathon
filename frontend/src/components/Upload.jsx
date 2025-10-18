@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { getCurrentUser } from "aws-amplify/auth";
 import * as pdfjsLib from "pdfjs-dist";
+import logo from "../logo.jpg";
 
 // Follow-up questions configuration for each business purpose
 const FOLLOW_UP_QUESTIONS = {
@@ -353,6 +354,8 @@ const Upload = () => {
             </svg>
             <span className="text-sm font-medium">Back</span>
           </button>
+
+          <img src={logo} alt="SlideRx" className="h-8" />
 
           <button
             className="px-4 py-2 text-sm font-medium text-neutral-light hover:text-[#EF4444] transition-colors font-sans"

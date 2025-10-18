@@ -17,6 +17,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCurrentUser } from "aws-amplify/auth";
+import logo from "../logo.jpg";
 
 // Mock questions for testing (used if API doesn't return reviewAndRefine)
 const mockQuestions = [
@@ -409,7 +410,7 @@ const FollowUp = () => {
             </button>
 
             {/* Logo */}
-            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+            <img src={logo} alt="SlideRx" className="h-8" />
 
             {/* Logout Button */}
             <button

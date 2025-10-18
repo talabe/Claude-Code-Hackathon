@@ -16,6 +16,7 @@
 
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import logo from "../logo.jpg";
 
 // Mock data - Used as fallback if no project data is passed
 const MOCK_RESULTS = {
@@ -328,6 +329,7 @@ const Results = () => {
             </svg>
             <span className="text-sm font-medium">Back to Dashboard</span>
           </button>
+          <img src={logo} alt="SlideRx" className="h-8" />
           <button
             className="px-4 py-2 text-sm font-medium text-neutral-light hover:text-[#EF4444] transition-colors font-sans"
             onClick={() => navigate("/logout")}

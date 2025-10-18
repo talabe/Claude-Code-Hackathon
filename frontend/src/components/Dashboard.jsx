@@ -17,6 +17,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "aws-amplify/auth";
+import logo from "../logo.jpg";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -267,7 +268,7 @@ const Dashboard = () => {
         {/* Header */}
         <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+            <img src={logo} alt="SlideRx" className="h-8" />
             <button
               onClick={handleLogout}
               className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
@@ -316,7 +317,7 @@ const Dashboard = () => {
         {/* Header */}
         <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+            <img src={logo} alt="SlideRx" className="h-8" />
             <button
               onClick={handleLogout}
               className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
@@ -367,7 +368,7 @@ const Dashboard = () => {
         {/* Header */}
         <header className="bg-white border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-            <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+            <img src={logo} alt="SlideRx" className="h-8" />
             <button
               onClick={handleLogout}
               className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
@@ -419,7 +420,7 @@ const Dashboard = () => {
       {/* Header */}
       <header className="bg-white border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold font-mono text-heading">SlideRx</h1>
+          <img src={logo} alt="SlideRx" className="h-8" />
           <button
             onClick={handleLogout}
             className="text-sm text-neutral-light hover:text-[#EF4444] transition-colors font-medium font-sans"
