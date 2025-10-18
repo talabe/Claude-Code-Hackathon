@@ -17,6 +17,7 @@ import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { getCurrentUser } from "aws-amplify/auth";
 import * as pdfjsLib from "pdfjs-dist";
+import logo from "../logo.jpg";
 
 // Follow-up questions configuration for each business purpose
 const FOLLOW_UP_QUESTIONS = {
@@ -330,12 +331,12 @@ const Upload = () => {
     businessPurpose && (currentQuestions.length === 0 || allFollowUpsAnswered);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background-light">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-border">
         <div className="max-w-[800px] mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
           <button
-            className="flex items-center gap-2 text-[#64748B] hover:text-[#2563EB] transition-colors"
+            className="flex items-center gap-2 text-neutral-light hover:text-[#c7e565] transition-colors font-sans"
             onClick={() => navigate("/dashboard")}
           >
             <svg
@@ -354,8 +355,10 @@ const Upload = () => {
             <span className="text-sm font-medium">Back</span>
           </button>
 
+          <img src={logo} alt="SlideRx" className="h-8" />
+
           <button
-            className="px-4 py-2 text-sm font-medium text-[#64748B] hover:text-[#EF4444] transition-colors"
+            className="px-4 py-2 text-sm font-medium text-neutral-light hover:text-[#EF4444] transition-colors font-sans"
             onClick={() => navigate("/logout")}
           >
             Logout
@@ -366,31 +369,31 @@ const Upload = () => {
       {/* Main Content */}
       <main className="max-w-[800px] mx-auto px-4 sm:px-8 py-8 sm:py-16">
         {/* Page Title */}
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 sm:mb-12">
+        <h1 className="text-4xl font-bold font-mono text-heading mb-8 sm:mb-12">
           Transform Your Deck - Make An Impact
         </h1>
 
         {/* Business Purpose Section */}
         <section className="mb-8">
           <div className="flex flex-col items-center mb-4">
-            <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
-              <span className="text-white font-bold text-lg">1</span>
+            <div className="w-12 h-12 bg-[#c7e565] rounded-full flex items-center justify-center mb-3">
+              <span className="text-black font-bold text-lg font-mono">1</span>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 text-center">
+            <h2 className="text-2xl font-semibold font-mono text-heading text-center">
               Business Purpose
             </h2>
-            <p className="text-sm text-[#64748B] italic text-center mt-2">
+            <p className="text-sm text-neutral-light italic text-center mt-2 font-sans">
               This helps our AI tailor the analysis to your specific
               presentation goals and executive expectations.
             </p>
           </div>
-          <label className="block text-base font-bold text-gray-900 mb-2">
+          <label className="block text-base font-bold font-mono text-heading mb-2">
             What's the business purpose?
           </label>
           <select
             value={businessPurpose}
             onChange={handlePurposeChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+            className="w-full px-4 py-3 border border-border rounded-lg bg-white text-base text-neutral-dark font-sans focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           >
             <option value="">Select a purpose</option>
             <option value="Status Update">Status Update</option>
@@ -406,17 +409,17 @@ const Upload = () => {
         {businessPurpose && (
           <section className="mb-8 fade-in-section">
             <div className="flex flex-col items-center mb-4">
-              <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
-                <span className="text-white font-bold text-lg">2</span>
+              <div className="w-12 h-12 bg-[#c7e565] rounded-full flex items-center justify-center mb-3">
+                <span className="text-black font-bold text-lg font-mono">2</span>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 text-center">
+              <h2 className="text-2xl font-semibold font-mono text-heading text-center">
                 Project Name (optional)
               </h2>
-              <p className="text-sm text-[#64748B] italic text-center mt-2">
+              <p className="text-sm text-neutral-light italic text-center mt-2 font-sans">
                 Give your project a memorable name for easy reference
               </p>
             </div>
-            <label className="block text-base font-bold text-gray-900 mb-2">
+            <label className="block text-base font-bold font-mono text-heading mb-2">
               Project Name
             </label>
             <div>
@@ -426,14 +429,14 @@ const Upload = () => {
                 onChange={(e) => setProjectName(e.target.value)}
                 maxLength={100}
                 placeholder="e.g., Q4 Budget Review, Client Pitch Deck, Team Update"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                className="w-full px-4 py-3 border border-border rounded-lg bg-white text-base text-neutral-dark font-sans focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <div className="text-right mt-1">
                 <span
-                  className={`text-xs italic ${
+                  className={`text-xs italic font-sans ${
                     projectName.length > 85
                       ? "text-[#EF4444] font-semibold"
-                      : "text-[#64748B]"
+                      : "text-neutral-light"
                   }`}
                 >
                   {projectName.length}/100
@@ -447,13 +450,13 @@ const Upload = () => {
         {currentQuestions.length > 0 && (
           <section className="mb-8 space-y-6 fade-in-section">
             <div className="flex flex-col items-center mb-4">
-              <div className="w-12 h-12 bg-[#2563EB] rounded-full flex items-center justify-center mb-3">
-                <span className="text-white font-bold text-lg">3</span>
+              <div className="w-12 h-12 bg-[#c7e565] rounded-full flex items-center justify-center mb-3">
+                <span className="text-black font-bold text-lg font-mono">3</span>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 text-center">
+              <h2 className="text-2xl font-semibold font-mono text-heading text-center">
                 Additional Details
               </h2>
-              <p className="text-sm text-[#64748B] italic text-center mt-2">
+              <p className="text-sm text-neutral-light italic text-center mt-2 font-sans">
                 These details help the AI understand your purpose and provide
                 tailor-made recommendations.
               </p>
@@ -461,7 +464,7 @@ const Upload = () => {
 
             {currentQuestions.map((question) => (
               <div key={question.id}>
-                <label className="block text-base font-bold text-gray-900 mb-2">
+                <label className="block text-base font-bold font-mono text-heading mb-2">
                   {question.label}
                 </label>
 
@@ -474,15 +477,15 @@ const Upload = () => {
                         handleFollowUpChange(question.id, e.target.value)
                       }
                       maxLength={100}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                      className="w-full px-4 py-3 border border-border rounded-lg bg-white text-base text-neutral-dark font-sans focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                       placeholder="Enter your answer..."
                     />
                     <div className="text-right mt-1">
                       <span
-                        className={`text-xs italic ${
+                        className={`text-xs italic font-sans ${
                           (followUpAnswers[question.id]?.length || 0) > 85
                             ? "text-[#EF4444] font-semibold"
-                            : "text-[#64748B]"
+                            : "text-neutral-light"
                         }`}
                       >
                         {followUpAnswers[question.id]?.length || 0}/100
@@ -495,7 +498,7 @@ const Upload = () => {
                     onChange={(e) =>
                       handleFollowUpChange(question.id, e.target.value)
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent"
+                    className="w-full px-4 py-3 border border-border rounded-lg bg-white text-base text-neutral-dark font-sans focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="">Select an option</option>
                     {question.options.map((option) => (
@@ -516,17 +519,17 @@ const Upload = () => {
             <div className="flex flex-col items-center mb-4">
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${
-                  currentQuestions.length > 0 ? "bg-[#2563EB]" : "bg-[#10B981]"
+                  currentQuestions.length > 0 ? "bg-[#c7e565]" : "bg-[#10B981]"
                 }`}
               >
-                <span className="text-white font-bold text-lg">
+                <span className="text-black font-bold text-lg font-mono">
                   {currentQuestions.length > 0 ? "4" : "3"}
                 </span>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 text-center">
+              <h2 className="text-2xl font-semibold font-mono text-heading text-center">
                 File Upload
               </h2>
-              <p className="text-sm text-[#64748B] italic text-center mt-2">
+              <p className="text-sm text-neutral-light italic text-center mt-2 font-sans">
                 Upload your PDF presentation so our AI can analyze and condense
                 it into an executive-ready summary.
               </p>
@@ -536,8 +539,8 @@ const Upload = () => {
               relative border-2 border-dashed rounded-lg p-8 sm:p-12 text-center transition-all
               ${
                 isDragging
-                  ? "border-[#2563EB] bg-blue-50"
-                  : "border-gray-300 bg-white"
+                  ? "border-[#c7e565] bg-background-light"
+                  : "border-border bg-white"
               }
               ${error ? "border-[#EF4444] bg-red-50" : ""}
             `}
@@ -570,29 +573,19 @@ const Upload = () => {
                     />
                   </svg>
                   <div>
-                    <p className="text-base font-medium text-gray-900">
+                    <p className="text-base font-medium font-mono text-heading">
                       {selectedFile.name}
                     </p>
-                    <p className="text-sm text-[#64748B] mt-1">
+                    <p className="text-sm text-neutral-light font-sans mt-1">
                       {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                       {pdfPageCount && ` • ${pdfPageCount} pages`}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedFile(null);
-                      setPdfPageCount(null);
-                      setError("");
-                    }}
-                    className="text-sm text-[#2563EB] hover:text-[#1e40af] font-medium"
-                  >
-                    Change file
-                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-4">
                   <svg
-                    className="w-12 h-12 text-[#64748B]"
+                    className="w-12 h-12 text-neutral-light"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -605,12 +598,12 @@ const Upload = () => {
                     />
                   </svg>
                   <div>
-                    <p className="text-base text-gray-700 mb-2">
+                    <p className="text-base text-neutral-dark font-sans mb-2">
                       Drag and drop your PDF here, or
                     </p>
                     <button
                       onClick={handleBrowseClick}
-                      className="px-6 py-2 bg-[#2563EB] text-white rounded-lg hover:bg-[#1e40af] transition-colors font-medium"
+                      className="px-6 py-2 bg-[#c7e565] text-black rounded-lg hover:bg-[#90BC00] transition-colors font-medium font-mono"
                     >
                       Browse Files
                     </button>
@@ -618,13 +611,13 @@ const Upload = () => {
                 </div>
               )}
 
-              <p className="text-sm text-[#64748B] mt-4">
+              <p className="text-sm text-neutral-light font-sans mt-4">
                 Max 15 slides, 10MB, PDF format
               </p>
 
               {error && (
                 <div className="mt-4 p-3 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
-                  <p className="text-sm text-[#EF4444] font-medium">{error}</p>
+                  <p className="text-sm text-[#EF4444] font-medium font-sans">{error}</p>
                 </div>
               )}
             </div>
@@ -637,10 +630,10 @@ const Upload = () => {
             onClick={handleSubmit}
             disabled={!selectedFile || !businessPurpose || isUploading}
             className={`
-              px-12 py-4 rounded-lg font-semibold text-lg transition-all
+              px-12 py-4 rounded-lg font-semibold text-lg transition-all font-mono
               ${
                 selectedFile && businessPurpose && !isUploading
-                  ? "bg-[#2563EB] text-white hover:bg-[#1e40af] cursor-pointer shadow-lg hover:shadow-xl"
+                  ? "bg-[#c7e565] text-black hover:bg-[#90BC00] cursor-pointer shadow-lg hover:shadow-xl"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }
             `}

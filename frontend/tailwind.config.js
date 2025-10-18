@@ -7,16 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // SlideRx brand colors
-        primary: '#2563EB',
-        secondary: '#10B981',
-        accent: '#F59E0B',
-        error: '#EF4444',
-        neutral: '#64748B',
-        background: '#F8FAFC',
+        // SlideRx brand colors - NEW DESIGN SYSTEM
+        primary: '#c7e565',       // Lime green
+        primaryDark: '#90BC00',   // Dark green for hover states
+        secondary: '#10B981',     // Keep for success states
+        accent: '#F59E0B',        // Keep for warning states
+        error: '#EF4444',         // Keep for error states
+        neutral: {
+          light: '#ceced0',       // Light gray for secondary text
+          DEFAULT: '#64748B',     // Medium gray
+          dark: '#222',           // Dark gray for main text
+        },
+        background: {
+          light: '#f5f5f5',       // Light background
+          DEFAULT: '#fff',        // White
+        },
+        border: '#eaeaea',        // Light gray border
+        heading: '#111',          // Almost black for headings
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'monospace'],      // For headings, buttons
+        sans: ['Montserrat', 'sans-serif'],          // For body text
       },
     },
   },

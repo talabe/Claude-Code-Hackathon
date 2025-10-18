@@ -11,8 +11,9 @@ import App from "./App.jsx";
 import "./index.css";
 import { Amplify } from "aws-amplify";
 import awsExports from "./aws-exports";
-import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
+import { Authenticator, useAuthenticator, ThemeProvider } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
+import "./authenticator-custom.css";
 import { Hub } from "aws-amplify/utils";
 import {
   fetchAuthSession,
@@ -23,6 +24,85 @@ import {
 
 // Configure Amplify (Gen1) with generated Cognito settings
 Amplify.configure(awsExports);
+
+// Custom theme for Authenticator to match SlideRx brand
+const authTheme = {
+  name: 'SlideRx Theme',
+  tokens: {
+    colors: {
+      background: {
+        primary: '#000000',      // Black background
+        secondary: '#1a1a1a',    // Slightly lighter black for hover
+      },
+      font: {
+        primary: '#ffffff',      // White text
+        secondary: '#ceced0',    // Light gray for secondary text
+        interactive: '#c7e565',  // Lime green for links
+      },
+      brand: {
+        primary: {
+          10: '#c7e565',         // Lime green
+          80: '#c7e565',
+          90: '#c7e565',
+          100: '#90BC00',        // Dark green for hover
+        },
+      },
+      border: {
+        primary: '#333333',      // Dark border
+        secondary: '#444444',
+      },
+    },
+    components: {
+      authenticator: {
+        router: {
+          backgroundColor: '#000000',
+          borderColor: '#333333',
+          boxShadow: '0 10px 30px rgba(199, 229, 101, 0.1)',
+        },
+      },
+      button: {
+        primary: {
+          backgroundColor: '#c7e565',
+          color: '#000000',
+          _hover: {
+            backgroundColor: '#90BC00',
+          },
+          _focus: {
+            backgroundColor: '#90BC00',
+            borderColor: '#c7e565',
+          },
+        },
+      },
+      fieldcontrol: {
+        backgroundColor: '#ffffff',
+        borderColor: '#333333',
+        color: '#222222',
+        _focus: {
+          borderColor: '#c7e565',
+          backgroundColor: '#ffffff',
+        },
+      },
+      tabs: {
+        item: {
+          color: '#ceced0',
+          _active: {
+            borderColor: '#c7e565',
+            color: '#c7e565',
+          },
+          _hover: {
+            color: '#c7e565',
+          },
+        },
+      },
+    },
+    fonts: {
+      default: {
+        variable: { value: 'Montserrat, sans-serif' },
+        static: { value: 'Montserrat, sans-serif' },
+      },
+    },
+  },
+};
 
 // --- Auth hardening for revoked/stale tokens ---
 // Helper: remove stale Cognito tokens from localStorage
@@ -124,12 +204,14 @@ function Root() {
   }
   // Centered login / create account page
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background-light flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        <Authenticator
-          loginMechanisms={["email"]}
-          signUpAttributes={["email"]}
-        />
+        <ThemeProvider theme={authTheme}>
+          <Authenticator
+            loginMechanisms={["email"]}
+            signUpAttributes={["email"]}
+          />
+        </ThemeProvider>
       </div>
     </div>
   );

@@ -1,0 +1,90 @@
+/* Custom styles for AWS Amplify Authenticator - SlideRx Theme */
+
+/* Input fields - white background with dark text */
+[data-amplify-authenticator] input[type="email"],
+[data-amplify-authenticator] input[type="password"],
+[data-amplify-authenticator] input[type="text"],
+[data-amplify-authenticator] input[type="tel"],
+[data-amplify-authenticator] input {
+  background-color: #ffffff !important;
+  color: #222222 !important;
+  border-color: #333333 !important;
+}
+
+/* Input placeholder text */
+[data-amplify-authenticator] input::placeholder {
+  color: #999999 !important;
+}
+
+/* Input fields on focus */
+[data-amplify-authenticator] input:focus {
+  background-color: #ffffff !important;
+  border-color: #c7e565 !important;
+  color: #222222 !important;
+}
+
+/* Authenticator container - black background */
+[data-amplify-authenticator] {
+  --amplify-components-authenticator-router-background-color: #000000;
+  --amplify-components-authenticator-router-border-color: #333333;
+  --amplify-components-fieldcontrol-background-color: #ffffff;
+  --amplify-components-fieldcontrol-color: #222222;
+  --amplify-components-fieldcontrol-border-color: #333333;
+  --amplify-components-fieldcontrol-focus-border-color: #c7e565;
+}
+
+/* Labels and text - white */
+[data-amplify-authenticator] label,
+[data-amplify-authenticator] .amplify-text {
+  color: #ffffff !important;
+}
+
+/* Buttons - lime green */
+[data-amplify-authenticator] button[type="submit"],
+[data-amplify-authenticator] .amplify-button--primary {
+  background-color: #c7e565 !important;
+  color: #000000 !important;
+  border: none !important;
+}
+
+[data-amplify-authenticator] button[type="submit"]:hover,
+[data-amplify-authenticator] .amplify-button--primary:hover {
+  background-color: #90BC00 !important;
+}
+
+/* Links - lime green */
+[data-amplify-authenticator] a,
+[data-amplify-authenticator] button[data-amplify-router-link] {
+  color: #c7e565 !important;
+}
+
+[data-amplify-authenticator] a:hover,
+[data-amplify-authenticator] button[data-amplify-router-link]:hover {
+  color: #90BC00 !important;
+}
+
+/* Tabs - lime green when active */
+[data-amplify-authenticator] [role="tab"][aria-selected="true"] {
+  color: #c7e565 !important;
+  border-bottom-color: #c7e565 !important;
+}
+
+[data-amplify-authenticator] [role="tab"] {
+  color: #ceced0 !important;
+}
+
+[data-amplify-authenticator] [role="tab"]:hover {
+  color: #c7e565 !important;
+}
+
+/* Error messages */
+[data-amplify-authenticator] .amplify-alert--error {
+  background-color: #2a1a1a !important;
+  color: #ff6b6b !important;
+  border-color: #ff4444 !important;
+}
+
+/* Secondary text */
+[data-amplify-authenticator] .amplify-text--secondary {
+  color: #ceced0 !important;
+}

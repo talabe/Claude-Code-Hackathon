@@ -16,6 +16,7 @@
 
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import logo from "../logo.jpg";
 
 // Mock data - Used as fallback if no project data is passed
 const MOCK_RESULTS = {
@@ -305,12 +306,12 @@ const Results = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-background-light">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-border">
         <div className="max-w-[900px] mx-auto px-4 sm:px-8 py-4 flex justify-between items-center">
           <button
-            className="flex items-center gap-2 text-[#64748B] hover:text-[#2563EB] transition-colors"
+            className="flex items-center gap-2 text-neutral-light hover:text-[#c7e565] transition-colors font-sans"
             onClick={handleBackToDashboard}
           >
             <svg
@@ -328,8 +329,9 @@ const Results = () => {
             </svg>
             <span className="text-sm font-medium">Back to Dashboard</span>
           </button>
+          <img src={logo} alt="SlideRx" className="h-8" />
           <button
-            className="px-4 py-2 text-sm font-medium text-[#64748B] hover:text-[#EF4444] transition-colors"
+            className="px-4 py-2 text-sm font-medium text-neutral-light hover:text-[#EF4444] transition-colors font-sans"
             onClick={() => navigate("/logout")}
           >
             Logout
@@ -359,10 +361,10 @@ const Results = () => {
 
         {/* Title Section */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold font-mono text-heading mb-4">
             Your Executive Summary
           </h1>
-          <div className="flex items-center gap-4 text-[#64748B]">
+          <div className="flex items-center gap-4 text-neutral-light font-sans">
             <span className="text-sm">
               Original: {results.originalFileName}
             </span>
@@ -378,9 +380,9 @@ const Results = () => {
           {slides.map((slide) => (
             <div
               key={slide.id}
-              className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 sm:p-8"
+              className="bg-white rounded-lg shadow-lg border border-border p-6 sm:p-8"
             >
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              <h2 className="text-2xl font-bold font-mono text-heading mb-4">
                 SLIDE {slide.id}: {slide.title}
               </h2>
 
@@ -393,8 +395,8 @@ const Results = () => {
                         {slide.visualIcon}
                       </span>
                       <div className="flex-1">
-                        <p className="text-base leading-relaxed text-gray-800">
-                          <span className="font-semibold text-gray-900">
+                        <p className="text-base leading-relaxed text-neutral-dark font-sans">
+                          <span className="font-semibold font-mono text-heading">
                             {field.label}:{" "}
                           </span>
                           {field.content}
@@ -408,12 +410,12 @@ const Results = () => {
                   {/* Old structure fallback */}
                   {slide.visualDescription && (
                     <div className="mb-4">
-                      <div className="flex items-start gap-3 text-[#64748B]">
+                      <div className="flex items-start gap-3 text-neutral-light">
                         <span className="text-2xl flex-shrink-0">
                           {slide.visualIcon}
                         </span>
-                        <p className="text-base leading-relaxed">
-                          <span className="font-semibold">Visual: </span>
+                        <p className="text-base leading-relaxed font-sans">
+                          <span className="font-semibold font-mono">Visual: </span>
                           {slide.visualDescription}
                         </p>
                       </div>
@@ -421,7 +423,7 @@ const Results = () => {
                   )}
 
                   {slide.oneSentence && (
-                    <p className="text-lg font-bold text-gray-900 leading-relaxed">
+                    <p className="text-lg font-bold font-mono text-heading leading-relaxed">
                       "{slide.oneSentence}"
                     </p>
                   )}
@@ -432,21 +434,21 @@ const Results = () => {
         </div>
 
         {/* Why We Cut This Section */}
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden mb-8">
+        <div className="bg-white rounded-lg shadow-lg border border-border overflow-hidden mb-8">
           <button
             onClick={toggleReport}
             onKeyDown={(e) => e.key === "Enter" && toggleReport()}
-            className="w-full px-6 sm:px-8 py-6 flex items-center justify-between hover:bg-[#F8FAFC] transition-colors focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-inset"
+            className="w-full px-6 sm:px-8 py-6 flex items-center justify-between hover:bg-background-light transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset"
             aria-expanded={reportExpanded}
           >
             <div className="flex items-center gap-3">
               <span className="text-2xl">📚</span>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+              <h2 className="text-xl sm:text-2xl font-bold font-mono text-heading">
                 Why We Cut This
               </h2>
             </div>
             <svg
-              className={`w-6 h-6 text-[#64748B] transition-transform duration-300 ${
+              className={`w-6 h-6 text-neutral-light transition-transform duration-300 ${
                 reportExpanded ? "rotate-180" : ""
               }`}
               fill="none"
@@ -473,41 +475,41 @@ const Results = () => {
               {results.whyWeCut.map((item, index) => (
                 <div key={item.id}>
                   {index > 0 && (
-                    <div className="border-t border-gray-200 my-6"></div>
+                    <div className="border-t border-border my-6"></div>
                   )}
                   <div className="space-y-3">
-                    <h3 className="font-bold text-gray-900 text-lg">
+                    <h3 className="font-bold font-mono text-heading text-lg">
                       {item.slidesAffected}
                     </h3>
 
                     <div className="flex items-start gap-2">
                       <span className="text-lg flex-shrink-0">❌</span>
-                      <p className="text-base text-gray-800">
-                        <span className="font-semibold">CUT: </span>
+                      <p className="text-base text-neutral-dark font-sans">
+                        <span className="font-semibold font-mono">CUT: </span>
                         {item.cutDescription}
                       </p>
                     </div>
 
                     <div className="flex items-start gap-2">
                       <span className="text-lg flex-shrink-0">✅</span>
-                      <p className="text-base text-gray-800">
-                        <span className="font-semibold">WHY: </span>
+                      <p className="text-base text-neutral-dark font-sans">
+                        <span className="font-semibold font-mono">WHY: </span>
                         {item.whyDescription}
                       </p>
                     </div>
 
                     <div className="flex items-start gap-2">
                       <span className="text-lg flex-shrink-0">📚</span>
-                      <p className="text-base text-gray-800">
-                        <span className="font-semibold">PRINCIPLE: </span>
+                      <p className="text-base text-neutral-dark font-sans">
+                        <span className="font-semibold font-mono">PRINCIPLE: </span>
                         {item.principle}
                       </p>
                     </div>
 
                     <div className="flex items-start gap-2">
                       <span className="text-lg flex-shrink-0">📍</span>
-                      <p className="text-base text-gray-800">
-                        <span className="font-semibold">LOCATION: </span>
+                      <p className="text-base text-neutral-dark font-sans">
+                        <span className="font-semibold font-mono">LOCATION: </span>
                         {item.location}
                       </p>
                     </div>
@@ -522,13 +524,13 @@ const Results = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={handleDownloadPDF}
-            className="px-8 py-4 bg-[#2563EB] text-white rounded-lg font-semibold text-lg hover:bg-[#1e40af] transition-colors shadow-lg hover:shadow-xl"
+            className="px-8 py-4 bg-[#c7e565] text-black rounded-lg font-semibold text-lg font-mono hover:bg-[#90BC00] transition-colors shadow-lg hover:shadow-xl"
           >
             Download PDF
           </button>
           <button
             onClick={handleAnalyzeAnother}
-            className="px-8 py-4 bg-white text-[#2563EB] border-2 border-[#2563EB] rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl"
+            className="px-8 py-4 bg-white text-black border-2 border-[#c7e565] rounded-lg font-semibold text-lg font-mono hover:bg-background-light transition-colors shadow-lg hover:shadow-xl"
           >
             Analyze Another
           </button>
