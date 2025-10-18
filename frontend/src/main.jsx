@@ -212,12 +212,18 @@ function Root() {
       Header() {
         return (
           <View textAlign="center" padding="medium">
-            <Image
-              alt="SlideRx Logo"
-              src={logoDark}
-              maxWidth="200px"
-              margin="0 auto"
-            />
+            <a
+              href="https://master.d2o9vrrs9fbgj.amplifyapp.com"
+              style={{ cursor: "pointer", display: "inline-block" }}
+            >
+              <Image
+                alt="SlideRx Logo"
+                src={logoDark}
+                maxWidth="200px"
+                margin="0 auto"
+                style={{ transition: "opacity 0.3s ease" }}
+              />
+            </a>
           </View>
         );
       },
@@ -226,12 +232,18 @@ function Root() {
       Header() {
         return (
           <View textAlign="center" padding="medium">
-            <Image
-              alt="SlideRx Logo"
-              src={logoDark}
-              maxWidth="200px"
-              margin="0 auto"
-            />
+            <a
+              href="https://master.d2o9vrrs9fbgj.amplifyapp.com"
+              style={{ cursor: "pointer", display: "inline-block" }}
+            >
+              <Image
+                alt="SlideRx Logo"
+                src={logoDark}
+                maxWidth="200px"
+                margin="0 auto"
+                style={{ transition: "opacity 0.3s ease" }}
+              />
+            </a>
           </View>
         );
       },
@@ -243,8 +255,8 @@ function Root() {
   }
   // Centered login / create account page
   return (
-    <div className="min-h-screen bg-background-light flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background-light flex flex-col items-center justify-center px-4">
+      <div className="w-full max-w-md flex-1 flex items-center justify-center">
         <ThemeProvider theme={authTheme}>
           <Authenticator
             loginMechanisms={["email"]}
@@ -253,6 +265,20 @@ function Root() {
           />
         </ThemeProvider>
       </div>
+      {/* Copyright Footer */}
+      <footer className="w-full text-center py-6 text-sm text-gray-500">
+        <p>
+          2025@ Copyright{" "}
+          <a
+            href="https://master.d2o9vrrs9fbgj.amplifyapp.com"
+            className="text-lime-400 hover:text-lime-300 transition-colors"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            SlideRX
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
