@@ -1,0 +1,23 @@
+.btn {
+  @apply inline-block rounded-xl px-7 py-4 text-[15px] font-semibold text-text transition cursor-pointer;
+}
+
+.btn.btn-md {
+  @apply py-3 cursor-pointer;
+}
+
+.btn-primary {
+  @apply border-dark hover:text-dark border bg-primary hover:bg-transparent;
+}
+
+.btn-primary-text-dark {
+  @apply bg-dark hover:text-dark border-0 text-white hover:bg-primary;
+}
+
+.btn-primary-gray {
+  @apply bg-dark/10 text-dark hover:border-dark hover:text-dark inline-block rounded-lg px-6 py-3 transition-colors duration-300 hover:bg-primary hover:no-underline;
+}
+
+.btn-outline-primary {
+  @apply border-dark hover:bg-dark border bg-transparent hover:text-white;
+}

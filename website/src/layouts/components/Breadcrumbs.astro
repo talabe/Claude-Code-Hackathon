@@ -1,0 +1,52 @@
+---
+import DynamicIcon from "@/helpers/DynamicIcon";
+import { humanize } from "@/lib/utils/textConverter";
+const { path } = Astro.props;
+const { className }: { className?: string } = Astro.props;
+const paths = Astro.url.pathname.split("/").filter((x) => x);
+let parts = [
+  {
+    label: "Home",
+    href: "",
+    "aria-label": Astro.url.pathname === "/" ? "page" : undefined,
+  },
+];
+paths.forEach((label: string) => {
+  const href = `/${path
+    ?.find((item: any) => item.path === label)
+    ?.link.replace(/\.mdx?$/, "")}`;
+
+  label !== "page" &&
+    parts.push({
+      label: humanize(label.replace(".html", "").replace(/[-_]/g, " ")) || "",
+      href,
+      "aria-label": Astro.url.pathname === href ? "page" : undefined,
+    });
+});
+---
+
+<nav aria-label="Breadcrumb" class={className}>
+  <ol class="flex justify-start" role="list">
+    {
+      parts.slice(2, parts.length).map(({ label, ...attrs }, index) => (
+        <li
+          class="mx-1 capitalize text-sm font-medium flex items-center"
+          role="listitem"
+        >
+          {index > 0 && (
+            <span class="inline-block mr-1 text-text-light">
+              <DynamicIcon icon="FaChevronRight" />
+            </span>
+          )}
+          {index !== parts.slice(2, parts.length).length - 1 ? (
+            <a class="hover:text-primary text-text-light" {...attrs}>
+              {label}
+            </a>
+          ) : (
+            <span class="text-text-dark text-sm">{label}</span>
+          )}
+        </li>
+      ))
+    }
+  </ol>
+</nav>

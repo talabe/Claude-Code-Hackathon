@@ -1,0 +1,32 @@
+---
+import DynamicIcon from "@/helpers/DynamicIcon";
+const { topic, getPages } = Astro.props;
+
+const getFirstVisitLink = (slug: string) => {
+  const filterlink = getPages
+    .filter((item: any) => !item.id.includes("-index"))
+    .map((data: any) => data.id)
+    .sort((a: string, b: string) => b.localeCompare(a));
+
+  const link = filterlink.find((id: string) =>
+    id.includes(slug.split("/-")[0])
+  );
+  return link;
+};
+---
+
+<div class="flex md:col-6 lg:col-4 2xl:col-3">
+  <div
+    class="flex flex-col items-start rounded-xl border border-border/30 px-5 py-7 sm:rounded-2xl"
+  >
+    <div
+      class="colored-box mb-6 flex h-[80px] w-[80px] items-center justify-center rounded-full text-center"
+    >
+      <DynamicIcon client:load icon={topic.data.icon} className="w-9 h-9" />
+    </div>
+    <h3 class="mb-5 text-h5 font-normal text-white">{topic.data.title}</h3>
+    <p class="mb-5 font-secondary font-normal text-text-light/70">
+      {topic.data.description}
+    </p>
+  </div>
+</div>

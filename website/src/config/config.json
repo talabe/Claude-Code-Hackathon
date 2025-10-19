@@ -1,0 +1,40 @@
+{
+  "site": {
+    "title": "SlideRX",
+    "base_url": "https://master.d2o9vrrs9fbgj.amplifyapp.com",
+    "base_path": "/",
+    "trailing_slash": false,
+    "favicon": "/images/favicon.png",
+    "logo": "/images/logo-dark.png",
+    "footer_logo": "/images/logo-light.png",
+    "logo_width": "160",
+    "logo_height": "40",
+    "logo_text": "SlideRX"
+  },
+
+  "params": {
+    "contact_form_action": "#",
+    "copyright": "©Copyright 2025 SlideRX"
+  },
+
+  "metadata": {
+    "meta_author": "SlideRX",
+    "meta_image": "/images/og-image.png",
+    "meta_description": "SlideRX - Early AI Adopters Hackathon Project"
+  },
+  "navigation_button": {
+    "enable": true,
+    "buttons": [
+      {
+        "label": "Pricing",
+        "link": "/pricing",
+        "fill": false
+      },
+      {
+        "label": "Log In",
+        "link": "https://main.d3jwqghd7z2itd.amplifyapp.com",
+        "fill": true
+      }
+    ]
+  }
+}

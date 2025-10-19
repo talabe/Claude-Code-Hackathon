@@ -1,0 +1,135 @@
+---
+import Accordion from "@/components/Accordion.astro";
+import Topics from "@/components/Topics.astro";
+import Base from "@/layouts/Base.astro";
+import { getDocsPage } from "@/lib/contentParser.astro";
+import CallToAction from "@/partials/CallToAction.astro";
+import { Image } from "astro:assets";
+import type { CollectionEntry } from "astro:content";
+import { getEntry } from "astro:content";
+
+const homepage = (await getEntry(
+  "homepage",
+  "-index"
+)) as CollectionEntry<"homepage">;
+const faqIndex = (await getEntry("faq", "faq")) as CollectionEntry<"faq">;
+const callToAction = (await getEntry(
+  "call-to-action",
+  "call-to-action"
+)) as CollectionEntry<"call-to-action">;
+
+const { docsPage, allPages } = await getDocsPage("docs");
+
+const { banner, topics, faq, header_alt } = homepage?.data;
+const {
+  content,
+  title,
+  search: { enable, input_placeholder, button_text },
+  subtitle,
+  image,
+} = banner;
+---
+
+<Base header_alt={header_alt}>
+  <section
+    class="section-lg xl:bg-hero-pattern rounded-b-[2rem] bg-light bg-right bg-no-repeat sm:rounded-b-[80px] md:rounded-b-[120px]"
+  >
+    <div class="container">
+      <div class="row">
+        <div class="md:col-12 lg:col-7 xl:col-6">
+          <div
+            class="mb-6 w-fit rounded-lg bg-text-light/30 px-4 py-2 font-medium text-text sm:mb-8"
+          >
+            {subtitle}
+          </div>
+          <h1 class="mb-5 capitalize text-text-dark 2xl:pr-24">
+            {title}
+          </h1>
+          <p class="mb-10 font-secondary text-text">
+            {content}
+          </p>
+          {
+            enable && (
+              <a
+                href="https://main.d3jwqghd7z2itd.amplifyapp.com"
+                class="btn btn-primary-text-dark whitespace-nowrap"
+              >
+                {button_text}
+              </a>
+            )
+          }
+        </div>
+        <div class="hidden lg:col-5 xl:col-6 lg:block">
+          <Image
+            src={image}
+            alt="A bird sitting on a nest of eggs."
+            class="ml-auto block"
+            height={500}
+            width={500}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section pb-0">
+    <div
+      class="bg-dark mx-auto w-full max-w-[1700px] rounded-[2rem] sm:rounded-[40px]"
+    >
+      <div class="container pt-16 pb-16">
+        <div class="row pb-8">
+          <div class="col-12">
+            <div
+              class="mb-8 w-fit rounded-lg bg-light/20 px-4 py-2 font-medium text-white"
+            >
+              {topics.subtitle}
+            </div>
+            <h2 class="mb-5 capitalize text-white sm:mb-0">{topics.title}</h2>
+          </div>
+        </div>
+        <div class="has-colored-box row gy-4">
+          {
+            docsPage.map((topic) => (
+              <Topics topic={topic} getPages={allPages} />
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    {
+      faq.enable && (
+        <section class="section pb-0">
+          <div class="container">
+            <div class="row gy-5">
+              <div class="lg:col-6">
+                <div class="badge-gray mb-6 w-fit rounded-lg px-4 py-2 font-medium text-text sm:mb-8">
+                  {faq.subtitle}
+                </div>
+                <h2 class="mb-5 capitalize text-text-dark">{faq.title}</h2>
+                <p class="font-secondary font-normal text-text lg:mb-10">
+                  {faq.content}
+                </p>
+                {faq.button.enable && (
+                  <a
+                    href={faq.button.link}
+                    class="btn btn-primary-text-dark hidden lg:inline-block"
+                  >
+                    {faq.button.label}
+                  </a>
+                )}
+              </div>
+              <div class="lg:col-6">
+                <Accordion faq={faqIndex?.data} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )
+    }
+    <section class="section pb-0">
+      <div class="container">
+        <CallToAction callToAction={callToAction} />
+      </div>
+    </section>
+  </section>
+</Base>

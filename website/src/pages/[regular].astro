@@ -1,0 +1,84 @@
+---
+import Base from "@/layouts/Base.astro";
+import { getSinglePage } from "@/lib/contentParser.astro";
+import { markdownify } from "@/lib/utils/textConverter";
+import Faq from "@/partials/Faq.astro";
+import Pricing from "@/partials/Pricing.astro";
+
+export const getStaticPaths = async () => {
+  const landing_pages = await getSinglePage("landing-pages");
+  const pages = await getSinglePage("regular-pages");
+  const allpages = [...pages, ...landing_pages];
+  const paths = allpages.map((page: any) => {
+    return {
+      params: {
+        regular: page.id,
+      },
+      props: page,
+    };
+  });
+  return paths;
+};
+
+const page = Astro.props;
+const {
+  title,
+  meta_title,
+  description,
+  image,
+  header_alt,
+  page: pageType,
+  subtitle,
+  plans,
+  note,
+} = page.data;
+const { regular } = Astro.params;
+---
+
+<Base
+  title={title}
+  meta_title={meta_title}
+  description={description}
+  image={image}
+  header_alt={header_alt}
+>
+  {
+    pageType === "pricing" ? (
+      <Pricing
+        title={title}
+        subtitle={subtitle}
+        description={description}
+        plans={plans}
+        note={note}
+      />
+    ) : (
+      <section class="section-md mb-14 rounded-b-[2rem] bg-light md:mb-16 md:rounded-b-[80px]">
+        <div class="container">
+          <div class="row">
+            <div class="mx-auto rounded-t-2xl bg-white pb-0 pt-8 text-center md:col-10 md:px-10 md:pt-16">
+              <h1 class="text-h1-sm mb-2 text-text-dark md:mb-3 md:text-h1-md lg:text-h1">
+                {title}
+              </h1>
+              {page.date && (
+                <p class="text-sm font-medium md:text-h5">
+                  {new Intl.DateTimeFormat("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }).format(new Date(page.date))}
+                </p>
+              )}
+            </div>
+            <div class="mx-auto rounded-b-2xl bg-white md:col-10 md:px-10 md:pb-12">
+              <div
+                class="content max-sm:px-0"
+                set:html={page.body ? markdownify(page.body, true) : ""}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+</Base>

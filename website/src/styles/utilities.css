@@ -1,0 +1,22 @@
+@utility gy-0 {
+  --bs-gutter-y: 0rem;
+}
+
+@utility cs-scrollbar {
+  &::-webkit-scrollbar {
+    @apply w-[5px];
+  }
+
+  &::-webkit-scrollbar-thumb,
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  &:hover::-webkit-scrollbar-track {
+    @apply bg-light;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    @apply bg-dark/25;
+  }
+}

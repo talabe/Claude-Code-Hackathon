@@ -1,0 +1,14 @@
+---
+import PricingWrapper from "@/shortcodes/PricingWrapper";
+
+const { title, subtitle, description, plans, note } = Astro.props;
+---
+
+<PricingWrapper
+  client:load
+  title={title}
+  subtitle={subtitle}
+  description={description}
+  plans={plans}
+  note={note}
+/>

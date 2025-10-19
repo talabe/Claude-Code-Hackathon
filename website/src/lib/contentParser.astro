@@ -1,0 +1,40 @@
+---
+import { getCollection } from "astro:content";
+import dayjs from "dayjs";
+import fs from "fs";
+
+export const getSinglePage = async (collection: any) => {
+  const allPage = await getCollection(collection);
+  const removeIndex = allPage.filter((data: any) => data.id.match(/^(?!-)/));
+
+  const removeDrafts = removeIndex.filter((data: any) => !data.data.draft);
+
+  const addDate = removeDrafts.map((data: any) => {
+    const filePath = data.filePath;
+    const stats = fs.statSync(filePath);
+    const lastModified = dayjs(stats.mtime);
+
+    return {
+      ...data,
+      date: data.date ? data.date : lastModified.toISOString(),
+    };
+  });
+
+  return addDate;
+};
+
+export const getDocsPage = async (collection: any) => {
+  const allPages = await getSinglePage(collection);
+  const allData = await getCollection(collection);
+
+  const docsPage = allPages
+    .filter((item: any) => item.data.type === "docs")
+    .sort((a: any, b: any) => {
+      return a.data.weight - b.data.weight;
+    });
+
+  const removeIndex = allPages.filter((data: any) => data.id.match(/^(?!-)/));
+  const removeDrafts = removeIndex.filter((data: any) => !data.data.draft);
+  return { docsPage, allPages: removeDrafts, allData };
+};
+---

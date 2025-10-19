@@ -1,0 +1,7 @@
+/* form style */
+.form-input {
+  @apply focus:border-dark w-full border-0 border-b border-border pb-2 pl-0 text-sm font-normal placeholder:text-text/50 focus:shadow-none focus:ring-0 md:text-base;
+}
+.form-label {
+  @apply mb-2 block text-base font-medium text-text md:text-h5;
+}
