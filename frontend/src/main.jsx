@@ -139,7 +139,7 @@ async function warmSessionAfterSignIn() {
     // Touch attributes early to surface issues while still in Authenticator
     await fetchUserAttributes();
     const user = await getCurrentUser();
-    console.log("Signed in as:", user?.username || user?.userId);
+    // console.log("Signed in as:", user?.username || user?.userId);
   } catch (e) {
     const msg = e?.message || e?.toString?.() || "";
     const isRevoked =

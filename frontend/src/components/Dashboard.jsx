@@ -121,7 +121,7 @@ const Dashboard = () => {
   const handleCardClick = (project) => {
     const { projectId, status } = project;
 
-    console.log(`Card clicked: ${projectId}, status: ${status}`);
+    // console.log(`Card clicked: ${projectId}, status: ${status}`);
 
     if (status === "uploading") {
       console.log("Project is still uploading, showing toast message");
@@ -131,23 +131,23 @@ const Dashboard = () => {
     }
 
     if (status === "needs_review") {
-      console.log(`Navigating to /followup/${projectId}`);
+      // console.log(`Navigating to /followup/${projectId}`);
       navigate(`/followup/${projectId}`);
     } else if (status === "complete" || status === "completed") {
-      console.log(`Navigating to /results/${projectId} with project data`);
+      // console.log(`Navigating to /results/${projectId} with project data`);
       navigate(`/results/${projectId}`, { state: { project } });
     } else if (
       status === "processing" ||
       status === "generating presentation"
     ) {
-      console.log(`Navigating to /processing/${projectId}`);
+      // console.log(`Navigating to /processing/${projectId}`);
       navigate(`/processing/${projectId}`);
     }
   };
 
   // Handle new project button
   const handleNewProject = () => {
-    console.log("New Project clicked");
+    // console.log("New Project clicked");
     navigate("/upload");
   };
 
@@ -160,8 +160,8 @@ const Dashboard = () => {
   const fetchProjects = async () => {
     if (!userId) return;
     try {
-      console.log("Fetching projects...");
-      console.log("Using x-user-id:", userId);
+      // console.log("Fetching projects...");
+      // console.log("Using x-user-id:", userId);
       const response = await fetch(`${API_BASE_URL}/projects`, {
         method: "GET",
         headers: {
@@ -177,8 +177,8 @@ const Dashboard = () => {
       }
 
       const data = await response.json();
-      console.log(`Fetched ${data.items?.length || 0} projects`);
-      console.log("Projects data:", data);
+      // console.log(`Fetched ${data.items?.length || 0} projects`);
+      // console.log("Projects data:", data);
 
       // Sort projects by createdAt (most recent first)
       const sortedProjects = (data.items || []).sort((a, b) => {
@@ -187,7 +187,7 @@ const Dashboard = () => {
         return dateB - dateA;
       });
 
-      console.log("Sorted projects:", sortedProjects[0]);
+      // console.log("Sorted projects:", sortedProjects[0]);
 
       setProjects(sortedProjects);
       setNextToken(data.nextToken || null);
@@ -302,7 +302,9 @@ const Dashboard = () => {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <p className="text-neutral-light font-sans">Loading your projects...</p>
+              <p className="text-neutral-light font-sans">
+                Loading your projects...
+              </p>
             </div>
           </div>
         </main>
@@ -345,7 +347,9 @@ const Dashboard = () => {
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <h2 className="text-xl font-bold font-mono text-heading mb-2">Error</h2>
+                <h2 className="text-xl font-bold font-mono text-heading mb-2">
+                  Error
+                </h2>
                 <p className="text-neutral-light font-sans mb-6">{error}</p>
                 <button
                   onClick={handleRetry}

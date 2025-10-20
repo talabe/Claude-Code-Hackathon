@@ -107,8 +107,8 @@ const FollowUp = () => {
 
     const fetchQuestions = async () => {
       try {
-        console.log(`Fetching questions for project: ${projectId}`);
-        console.log("Using x-user-id:", userId);
+        // console.log(`Fetching questions for project: ${projectId}`);
+        // console.log("Using x-user-id:", userId);
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: "GET",
           headers: {
@@ -124,7 +124,7 @@ const FollowUp = () => {
         }
 
         const data = await response.json();
-        console.log("API response:", data);
+        // console.log("API response:", data);
 
         // Store the full project data
         setProjectData(data);
@@ -135,7 +135,7 @@ const FollowUp = () => {
           Array.isArray(data.reviewAndRefine) &&
           data.reviewAndRefine.length > 0
         ) {
-          console.log("Using real API questions:", data.reviewAndRefine);
+          // console.log("Using real API questions:", data.reviewAndRefine);
           setQuestions(data.reviewAndRefine);
           setUsingMockData(false);
 
@@ -211,9 +211,9 @@ const FollowUp = () => {
     setError("");
 
     try {
-      console.log("=== SUBMITTING FOLLOW-UP ANSWERS ===");
-      console.log("1. ProjectId:", projectId);
-      console.log("2. Answers object:", answers);
+      // console.log("=== SUBMITTING FOLLOW-UP ANSWERS ===");
+      // console.log("1. ProjectId:", projectId);
+      // console.log("2. Answers object:", answers);
 
       // Build reviewAndRefine array with answers
       const reviewAndRefineWithAnswers = questions.map((q) => ({
@@ -225,19 +225,19 @@ const FollowUp = () => {
         userAnswer: answers[q.id],
       }));
 
-      console.log(
-        "3. Built reviewAndRefine array:",
-        reviewAndRefineWithAnswers
-      );
+      // console.log(
+      //   "3. Built reviewAndRefine array:",
+      //   reviewAndRefineWithAnswers
+      // );
 
       const requestBody = {
         reviewAndRefine: reviewAndRefineWithAnswers,
       };
 
-      console.log("4. Request body:", JSON.stringify(requestBody, null, 2));
-      console.log("5. URL:", `${API_BASE_URL}/projects/${projectId}`);
+      // console.log("4. Request body:", JSON.stringify(requestBody, null, 2));
+      // console.log("5. URL:", `${API_BASE_URL}/projects/${projectId}`);
 
-      console.log("Submitting answers with x-user-id:", userId);
+      // console.log("Submitting answers with x-user-id:", userId);
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
         method: "POST",
         headers: {
@@ -247,23 +247,23 @@ const FollowUp = () => {
         body: JSON.stringify(requestBody),
       });
 
-      console.log("6. Response status:", response.status);
-      console.log("7. Response ok:", response.ok);
+      // console.log("6. Response status:", response.status);
+      // console.log("7. Response ok:", response.ok);
 
       if (!response.ok) {
         throw new Error("Failed to submit answers. Please try again.");
       }
 
-      console.log("8. ✅ Answers submitted successfully");
+      // console.log("8. ✅ Answers submitted successfully");
 
       // Show success message briefly before navigating
       setSuccessMessage("Answers submitted! Refining your summary...");
 
       // Navigate back to processing page after a brief delay
       setTimeout(() => {
-        console.log(
-          `9. Navigating to /processing/${projectId} with project data`
-        );
+        // console.log(
+        //   `9. Navigating to /processing/${projectId} with project data`
+        // );
         navigate(`/processing/${projectId}`, {
           state: {
             project: {
@@ -342,7 +342,9 @@ const FollowUp = () => {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h2 className="text-xl font-bold font-mono text-heading mb-2">Error</h2>
+            <h2 className="text-xl font-bold font-mono text-heading mb-2">
+              Error
+            </h2>
             <p className="text-neutral-light font-sans mb-6">{error}</p>
             <button
               onClick={() => navigate("/upload")}

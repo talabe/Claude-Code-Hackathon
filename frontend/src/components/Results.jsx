@@ -116,7 +116,7 @@ const Results = () => {
 
   // Get project data from route state, fallback to mock data
   const projectData = location.state?.project || null;
-  console.log("Results - Project Data:", projectData);
+  // console.log("Results - Project Data:", projectData);
 
   // Helper function to convert camelCase to Title Case
   const camelToTitle = (str) => {
@@ -256,12 +256,12 @@ const Results = () => {
 
   // Handler functions
   const handleDownloadPDF = async () => {
-    console.log("=== Download PDF ===");
+    // console.log("=== Download PDF ===");
 
     // Check if we have a downloadUrl from the project data
     if (projectData?.downloadUrl) {
       try {
-        console.log("Downloading from:", projectData.downloadUrl);
+        // console.log("Downloading from:", projectData.downloadUrl);
 
         // Open the URL in a new window to trigger download
         // This bypasses CORS issues since it's a direct navigation
@@ -415,7 +415,9 @@ const Results = () => {
                           {slide.visualIcon}
                         </span>
                         <p className="text-base leading-relaxed font-sans">
-                          <span className="font-semibold font-mono">Visual: </span>
+                          <span className="font-semibold font-mono">
+                            Visual:{" "}
+                          </span>
                           {slide.visualDescription}
                         </p>
                       </div>
@@ -434,7 +436,7 @@ const Results = () => {
         </div>
 
         {/* Why We Cut This Section */}
-        <div className="bg-white rounded-lg shadow-lg border border-border overflow-hidden mb-8">
+        {/* <div className="bg-white rounded-lg shadow-lg border border-border overflow-hidden mb-8">
           <button
             onClick={toggleReport}
             onKeyDown={(e) => e.key === "Enter" && toggleReport()}
@@ -518,7 +520,7 @@ const Results = () => {
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">

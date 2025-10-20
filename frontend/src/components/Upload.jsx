@@ -181,7 +181,7 @@ const Upload = () => {
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       const pageCount = pdf.numPages;
       setPdfPageCount(pageCount);
-      console.log(`PDF has ${pageCount} pages`);
+      // console.log(`PDF has ${pageCount} pages`);
     } catch (err) {
       console.error("Error counting PDF pages:", err);
       setPdfPageCount(null);
@@ -262,11 +262,11 @@ const Upload = () => {
         originalSlidesCount: pdfPageCount ? String(pdfPageCount) : undefined,
       };
 
-      console.log("followUpAnswers:", followUpAnswers);
-      console.log("PDF Page Count:", pdfPageCount);
-      console.log("Starting project with data:", projectData);
+      // console.log("followUpAnswers:", followUpAnswers);
+      // console.log("PDF Page Count:", pdfPageCount);
+      // console.log("Starting project with data:", projectData);
 
-      console.log("Starting project with x-user-id:", userId);
+      // console.log("Starting project with x-user-id:", userId);
       const projectResponse = await fetch(`${API_BASE_URL}/projects`, {
         method: "POST",
         headers: {
@@ -284,7 +284,7 @@ const Upload = () => {
       }
 
       const { projectId, uploadUrl } = await projectResponse.json();
-      console.log("Project created with ID:", projectId);
+      // console.log("Project created with ID:", projectId);
 
       // Step 2: Upload PDF to S3
       const uploadResponse = await fetch(uploadUrl, {
@@ -302,7 +302,7 @@ const Upload = () => {
         );
       }
 
-      console.log("File uploaded successfully");
+      // console.log("File uploaded successfully");
 
       // Step 3: Navigate to processing page
       navigate(`/processing/${projectId}`);
@@ -410,7 +410,9 @@ const Upload = () => {
           <section className="mb-8 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className="w-12 h-12 bg-[#c7e565] rounded-full flex items-center justify-center mb-3">
-                <span className="text-black font-bold text-lg font-mono">2</span>
+                <span className="text-black font-bold text-lg font-mono">
+                  2
+                </span>
               </div>
               <h2 className="text-2xl font-semibold font-mono text-heading text-center">
                 Project Name (optional)
@@ -451,7 +453,9 @@ const Upload = () => {
           <section className="mb-8 space-y-6 fade-in-section">
             <div className="flex flex-col items-center mb-4">
               <div className="w-12 h-12 bg-[#c7e565] rounded-full flex items-center justify-center mb-3">
-                <span className="text-black font-bold text-lg font-mono">3</span>
+                <span className="text-black font-bold text-lg font-mono">
+                  3
+                </span>
               </div>
               <h2 className="text-2xl font-semibold font-mono text-heading text-center">
                 Additional Details
@@ -617,7 +621,9 @@ const Upload = () => {
 
               {error && (
                 <div className="mt-4 p-3 bg-[#FEE2E2] border border-[#EF4444] rounded-lg">
-                  <p className="text-sm text-[#EF4444] font-medium font-sans">{error}</p>
+                  <p className="text-sm text-[#EF4444] font-medium font-sans">
+                    {error}
+                  </p>
                 </div>
               )}
             </div>

@@ -166,7 +166,7 @@ const Processing = () => {
 
     const checkProjectStatus = async () => {
       try {
-        console.log("Checking project status with x-user-id:", userId);
+        // console.log("Checking project status with x-user-id:", userId);
         const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
           method: "GET",
           headers: {
@@ -182,7 +182,7 @@ const Processing = () => {
         }
 
         const data = await response.json();
-        console.log("Project status:", data.status);
+        // console.log("Project status:", data.status);
 
         // Create merged project data
         let mergedProjectData;
@@ -197,13 +197,14 @@ const Processing = () => {
             status: data.status,
             downloadUrl: data.downloadUrl,
             updatedAt: data.updatedAt,
+            summary: data.summary,
           };
           setProjectData(mergedProjectData);
         }
 
         // Check 1: Are there unanswered follow-up questions?
         if (data.reviewAndRefine && Array.isArray(data.reviewAndRefine)) {
-          console.log("reviewAndRefine detected:", data.reviewAndRefine);
+          // console.log("reviewAndRefine detected:", data.reviewAndRefine);
 
           const hasUnansweredQuestions = data.reviewAndRefine.some(
             (q) => !q.userAnswer || q.userAnswer.trim() === ""
@@ -233,10 +234,10 @@ const Processing = () => {
           console.log(
             "Processing complete. Navigating to results with merged project data..."
           );
-          console.log(
-            "Merged project data includes downloadUrl:",
-            mergedProjectData.downloadUrl
-          );
+          // console.log(
+          //   "Merged project data includes downloadUrl:",
+          //   mergedProjectData.downloadUrl
+          // );
           navigate(`/results/${projectId}`, {
             state: { project: mergedProjectData },
           });
@@ -283,7 +284,9 @@ const Processing = () => {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h2 className="text-xl font-bold font-mono text-heading mb-2">Error</h2>
+            <h2 className="text-xl font-bold font-mono text-heading mb-2">
+              Error
+            </h2>
             <p className="text-neutral-light font-sans mb-6">{error}</p>
             <button
               onClick={() => navigate("/upload")}
